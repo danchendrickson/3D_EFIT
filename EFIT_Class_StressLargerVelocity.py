@@ -173,85 +173,88 @@ class EFIT:
                     )
                 )
     
-        if x == self.MaxX and y == self.MaxY:
-            Ds[0,1] =  (
-                (1.0/self.ds) *
-                (1.0/(1.0/self.Gp[2,x,y,z])) *
-                (-self.Gv[0,x,y,z] )
-                )
-        elif x == self.MaxX:
-            Ds[0,1] =  (
-                (1.0/self.ds) *
-                (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y+1,z]))) *
-                (self.Gv[0,x,y+1,z]-self.Gv[0,x,y,z] )
-                )
-        elif y == self.MaxY:
-            Ds[0,1] =  (
-                (1.0/self.ds) *
-                (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x+1,y,z]))) *
-                (self.Gv[1,x+1,y,z]-self.Gv[1,x,y,z] )
-                )
+        if x == self.MaxX or y == self.MaxY or z == self.MaxZ or x == 0 or y == 0 or z == 0:
+            Ds[0,1] = 0
+                #(
+                #(1.0/self.ds) *
+                #(1.0/(1.0/self.Gp[2,x,y,z])) *
+                #(-self.Gv[0,x,y,z] )
+                #)
+        # elif x == self.MaxX:
+        #     Ds[0,1] =  (
+        #         (1.0/self.ds) *
+        #         (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y+1,z]))) *
+        #         (self.Gv[0,x,y+1,z]-self.Gv[0,x,y,z] )
+        #         )
+        # elif y == self.MaxY:
+        #     Ds[0,1] =  (
+        #         (1.0/self.ds) *
+        #         (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x+1,y,z]))) *
+        #         (self.Gv[1,x,y,z]-self.Gv[1,x-1,y,z] )
+        #         )
         else:
             Ds[0,1] =  (
                 (1.0/self.ds) *
                 (4.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x+1,y,z])+(1.0/self.Gp[2,x,y+1,z])+(1.0/self.Gp[2,x+1,y+1,z]))) *
-                (self.Gv[0,x,y+1,z]-self.Gv[0,x,y,z] +self.Gv[1,x+1,y,z]-self.Gv[1,x,y,z] )
+                (self.Gv[0,x,y,z]-self.Gv[0,x-1,y,z] +self.Gv[1,x,y,z]-self.Gv[1,x,y-1,z] )
                 )
         Ds[1,0]=Ds[0,1]      
 
-        if x == self.MaxX and z == self.MaxZ:
-            Ds[0,2] =  (
-                (1.0/self.ds) *
-                (1.0/((1.0/self.Gp[2,x,y,z]))) *
-                (-self.Gv[2,x,y,z] )
-                )
-        elif x == self.MaxX:
-            Ds[0,2] =  (
-                (1.0/self.ds) *
-                (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y,z+1]))) *
-                (self.Gv[0,x,y,z+1]-self.Gv[0,x,y,z])
-                )
-        elif z == self.MaxZ:
-            Ds[0,2] =  (
-                (1.0/self.ds) *
-                (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x+1,y,z]))) *
-                (self.Gv[2,x+1,y,z]-self.Gv[2,x,y,z] )
-                )
+        if x == self.MaxX or y == self.MaxY or z == self.MaxZ or x == 0 or y == 0 or z == 0:
+            Ds[0,2] = 0 
+                #(
+                #(1.0/self.ds) *
+                #(1.0/((1.0/self.Gp[2,x,y,z]))) *
+                #(-self.Gv[2,x,y,z] )
+                #)
+        # elif x == self.MaxX:
+        #     Ds[0,2] =  (
+        #         (1.0/self.ds) *
+        #         (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y,z+1]))) *
+        #         (self.Gv[0,x,y,z+1]-self.Gv[0,x,y,z])
+        #         )
+        # elif z == self.MaxZ:
+        #     Ds[0,2] =  (
+        #         (1.0/self.ds) *
+        #         (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x+1,y,z]))) *
+        #         (self.Gv[2,x+1,y,z]-self.Gv[2,x,y,z] )
+        #         )
         else:
             Ds[0,2] =  (
                 (1.0/self.ds) *
                 (4.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x+1,y,z])+(1.0/self.Gp[2,x,y,z+1])+(1.0/self.Gp[2,x+1,y,z+1]))) *
-                (self.Gv[0,x,y,z+1]-self.Gv[0,x,y,z] +self.Gv[2,x+1,y,z]-self.Gv[2,x,y,z] )
+                (self.Gv[0,x,y,z]-self.Gv[0,x-1,y,z] +self.Gv[2,x,y,z]-self.Gv[2,x,y,z-1] )
                 )
         Ds[2,0]=Ds[0,2]
 
-        if y == self.MaxY  and z == self.MaxZ:
-            Ds[1,2] =  (
-                (1.0/self.ds) *
-                (1.0/((1.0/self.Gp[2,x,y,z]))) *
-                (self.Gv[1,x,y,z])
-                )
-        elif y == self.MaxY:
-            Ds[1,2] =  (
-                (1.0/self.ds) *
-                (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y,z+1]))) *
-                (self.Gv[1,x,y,z+1]-self.Gv[1,x,y,z])
-                )
-        elif z == self.MaxZ:
-            Ds[1,2] =  (
-                (1.0/self.ds) *
-                (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y+1,z]))) *
-                (self.Gv[2,x,y+1,z]-self.Gv[2,x,y,z] )
-                )
+        if x == self.MaxX or y == self.MaxY or z == self.MaxZ or x == 0 or y == 0 or z == 0:
+            Ds[1,2] =  0
+        #         (
+        #         (1.0/self.ds) *
+        #         (1.0/((1.0/self.Gp[2,x,y,z]))) *
+        #         (self.Gv[1,x,y,z])
+        #         )
+        # elif y == self.MaxY:
+        #     Ds[1,2] =  (
+        #         (1.0/self.ds) *
+        #         (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y,z+1]))) *
+        #         (self.Gv[1,x,y,z+1]-self.Gv[1,x,y,z])
+        #         )
+        # elif z == self.MaxZ:
+        #     Ds[1,2] =  (
+        #         (1.0/self.ds) *
+        #         (2.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y+1,z]))) *
+        #         (self.Gv[2,x,y+1,z]-self.Gv[2,x,y,z] )
+        #         )
         else:
             Ds[1,2] =  (
                 (1.0/self.ds) *
                 (4.0/((1.0/self.Gp[2,x,y,z])+(1.0/self.Gp[2,x,y+1,z])+(1.0/self.Gp[2,x,y,z+1])+(1.0/self.Gp[2,x,y+1,z+1]))) *
-                (self.Gv[1,x,y,z+1]-self.Gv[1,x,y,z] +self.Gv[2,x,y+1,z]-self.Gv[2,x,y,z] )
+                (self.Gv[1,x,y,z]-self.Gv[1,x,y-1,z] +self.Gv[2,x,y,z]-self.Gv[2,x,y,z-1] )
                 )
         Ds[2,1] = Ds[1,2]
 
-        Ds = self.CheckStressBoundary(x,y,z,Ds)
+        #Ds = self.CheckStressBoundary(x,y,z,Ds)
 
         return Ds
 
@@ -263,47 +266,47 @@ class EFIT:
         # Outputs: 3 dimmensions of velocity.  
         
         #Calculated velocity based on 3.54
-        x+=1
-        y+=1
-        z+=1
+        #x+=1
+        #y+=1
+        #z+=1
         DV = np.zeros(3)
 
-        if x == self.MaxX+1:
-            DV[0] = ((1 / self.ds ) *
-                    (1 / (self.Gp[0,x,y,z])) *
-                    (self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y-1,z] + self.Gs[0,2,x,y,z] -self.Gs[0,2,x,y,z-1])
-                    )
-        else:
-            DV[0] = ((1 / self.ds ) *
+        # if x == self.MaxX+1:
+        #     DV[0] = ((1 / self.ds ) *
+        #             (1 / (self.Gp[0,x,y,z])) *
+        #             (self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y,z] + self.Gs[0,2,x,y,z] -self.Gs[0,2,x,y,z])
+        #             )
+        # else:
+        DV[0] = ((1 / self.ds ) *
                     (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                    (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x,y,z] + self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y-1,z] + self.Gs[0,2,x,y,z] -self.Gs[0,2,x,y,z-1])
+                    (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x,y,z] + self.Gs[0,1,x,y+1,z] - self.Gs[0,1,x,y,z] + self.Gs[0,2,x,y,z+1] -self.Gs[0,2,x,y,z])
                     )
 
         #calculate velocity in y based on 3.54
-        if y==self.MaxY+1:
-            DV[1] = ((1 / self.ds ) *
-                    (1 / (self.Gp[0,x,y,z])) *
-                    (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,2,x,y,z] -self.Gs[1,2,x,y,z-1])
-                    )
-        else:
-            DV[1] = ((1 / self.ds ) *
+        # if y==self.MaxY+1:
+        #     DV[1] = ((1 / self.ds ) *
+        #             (1 / (self.Gp[0,x,y,z])) *
+        #             (self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y,z] + self.Gs[1,2,x,y,z] -self.Gs[1,2,x,y,z])
+        #             )
+        # else:
+        DV[1] = ((1 / self.ds ) *
                     (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                    (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y,z] + self.Gs[1,2,x,y,z] -self.Gs[1,2,x,y,z-1])
+                    (self.Gs[1,0,x+1,y,z] - self.Gs[1,0,x,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y,z] + self.Gs[1,2,x,y,z+1] -self.Gs[1,2,x,y,z])
                     )
 
         #calculate velocity in z based on 3.54
-        if z==self.MaxZ+1:
-            DV[2] = ((1 / self.ds ) *
-                    (1 / (self.Gp[0,x,y,z])) *
-                    (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z])
-                    )
-        else:
-            DV[2] = ((1 / self.ds ) *
+        # if z==self.MaxZ+1:
+        #     DV[2] = ((1 / self.ds ) *
+        #             (1 / (self.Gp[0,x,y,z])) *
+        #             (self.Gs[0,2,x,y,z] - self.Gs[0,2,x,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y,z])
+        #             )
+        # else:
+        DV[2] = ((1 / self.ds ) *
                     (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                    (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z])
+                    (self.Gs[2,0,x+1,y,z] - self.Gs[2,0,x,y,z] + self.Gs[2,1,x,y+1,z] - self.Gs[2,1,x,y,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z])
                     )
         
-        DV = self.CheckVelocityBoundary(x,y,z,DV)
+        #DV = self.CheckVelocityBoundary(x,y,z,DV)
 
         return DV
     
@@ -366,7 +369,7 @@ class EFIT:
 
         Temp[:,:] = np.sin(frequency * t) * EmitterPreasure
 
-        self.Gv[1,StartX:StartX+EmitterWidth,self.MaxY,StartZ:StartZ+EmitterWidth] = Temp
+        self.Gv[1,StartX:StartX+EmitterWidth,self.MaxY,StartZ:StartZ+EmitterWidth] += Temp
 
         return self
 
