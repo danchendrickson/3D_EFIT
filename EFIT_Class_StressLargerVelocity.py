@@ -20,12 +20,12 @@ class EFIT:
         
         
         #define empty grid for the 3 directions of velocity for 2 time steps
-        self.Gv = np.zeros(3*self.GridPointsV,dtype="float32").reshape(*self.GridShapeV)
+        self.Gv = np.zeros(3*self.GridPointsV,dtype="double").reshape(*self.GridShapeV)
         #define empty grid for the 3 directions of stress on 3 dimmensions of faces for 2 time steps
-        self.Gs = np.zeros(3*3*self.GridPointsS,dtype="float32").reshape(*self.GridShapeS)
+        self.Gs = np.zeros(3*3*self.GridPointsS,dtype="double").reshape(*self.GridShapeS)
         #define empty grid for the 3 scalar material properties at each node point.  Can honly hold scalar properties
         #Assumed properties are density, Lame 1, Lame 2, and the boundary conditions
-        self.Gp = np.zeros(4*self.GridPointsS,dtype="float32").reshape(*self.GridShapeP)
+        self.Gp = np.zeros(4*self.GridPointsS,dtype="double").reshape(*self.GridShapeP)
         
         self.MaxX = xGrid - 1
         self.MaxY = yGrid - 1
