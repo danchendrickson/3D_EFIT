@@ -129,7 +129,7 @@ class EFIT:
             Ds[0,1] =  (
                 (1/self.ds) *
                 (4/((1/self.Gp[2,x,y,z])+(1/self.Gp[2,x+1,y,z])+(1/self.Gp[2,x,y+1,z])+(1/self.Gp[2,x+1,y+1,z]))) *
-                (self.Gv[0,x,y+1,z]-self.Gv[0,x,y,z] +self.Gv[1,x+1,y,z]-self.Gv[1,x,y,z] )
+                (self.Gv[0,x,y+1,z]-self.Gv[0,x,y,z] + self.Gv[1,x+1,y,z]-self.Gv[1,x,y,z] )
                 )
             #Ds[1,0]=Ds[0,1]      
             Ds[0,2] =  (
@@ -178,15 +178,15 @@ class EFIT:
         if BCs == 0:
                 DV[0] = ((1 / self.ds ) *
                         (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (self.Gs[0,0,x,y,z] - self.Gs[0,0,x-1,y,z] + self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y-1,z] + self.Gs[0,2,x,y,z] -self.Gs[0,2,x,y,z-1])
+                        (-self.Gs[0,0,x+1,y,z] + self.Gs[0,0,x,y,z] - self.Gs[0,1,x,y,z] + self.Gs[0,1,x,y-1,z] - self.Gs[0,2,x,y,z] + self.Gs[0,2,x,y,z-1])
                         )
                 DV[1] = ((1 / self.ds ) *
                         (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y,z] - self.Gs[1,1,x,y-1,z] + self.Gs[1,2,x,y,z] -self.Gs[1,2,x,y,z-1])
+                        (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y,z] + self.Gs[1,2,x,y,z] -self.Gs[1,2,x,y,z-1])
                         )
                 DV[2] = ((1 / self.ds ) *
                         (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z] -self.Gs[2,2,x,y,z-1])
+                        (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z])
                         )
         elif BCs == 1:
             if x == self.MaxX: 
@@ -296,10 +296,10 @@ class EFIT:
         
         delS = self.DeltaStress(x,y,z)
 
-        #for i in range(3):
-        #        for j in range(3):
-        #            self.Gs[i,j,x,y,z] += delS[i,j] * self.ts
-        self.Gs[:,:,x,y,z] += delS[:,:] * self.ts
+        for i in range(3):
+                for j in range(3):
+                    self.Gs[i,j,x,y,z] +=  delS[i,j] * self.ts
+        #self.Gs[:,:,x,y,z] += delS[:,:] * self.ts
 
         return self
 
@@ -333,7 +333,7 @@ class EFIT:
         ##run for two periods and then stop:
         #if 2.0 / frequency < t:
             
-        EmitterWidth = 0.01 / self.ds
+        EmitterWidth = 0.04 / self.ds
         EmitterWidth = int(EmitterWidth)
         if EmitterWidth == 0: EmitterWidth = 4
 
