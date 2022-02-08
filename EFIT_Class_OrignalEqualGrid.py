@@ -131,19 +131,19 @@ class EFIT:
                 (4/((1/self.Gp[2,x,y,z])+(1/self.Gp[2,x+1,y,z])+(1/self.Gp[2,x,y+1,z])+(1/self.Gp[2,x+1,y+1,z]))) *
                 (self.Gv[0,x,y+1,z]-self.Gv[0,x,y,z] + self.Gv[1,x+1,y,z]-self.Gv[1,x,y,z] )
                 )
-            #Ds[1,0]=Ds[0,1]      
+            Ds[1,0]=Ds[0,1]      
             Ds[0,2] =  (
                 (1/self.ds) *
                 (4/((1/self.Gp[2,x,y,z])+(1/self.Gp[2,x+1,y,z])+(1/self.Gp[2,x,y,z+1])+(1/self.Gp[2,x+1,y,z+1]))) *
                 (self.Gv[0,x,y,z+1]-self.Gv[0,x,y,z] +self.Gv[2,x+1,y,z]-self.Gv[2,x,y,z] )
                 )
-            #Ds[2,0]=Ds[0,2]
+            Ds[2,0]=Ds[0,2]
             Ds[1,2] =  (
                 (1/self.ds) *
                 (4/((1/self.Gp[2,x,y,z])+(1/self.Gp[2,x,y+1,z])+(1/self.Gp[2,x,y,z+1])+(1/self.Gp[2,x,y+1,z+1]))) *
                 (self.Gv[1,x,y,z+1]-self.Gv[1,x,y,z] +self.Gv[2,x,y+1,z]-self.Gv[2,x,y,z] )
                 )
-            #Ds[2,1] = Ds[1,2]
+            Ds[2,1]=Ds[1,2]
         elif BCs ==1:
             pass
         elif BCs == 2:
@@ -152,7 +152,7 @@ class EFIT:
             pass
         else:
             print(x,y,z,'BCs Count')
-        Ds = self.CheckStressBoundary(x,y,z,Ds)
+        #Ds = self.CheckStressBoundary(x,y,z,Ds)
 
         return Ds
 
@@ -177,105 +177,39 @@ class EFIT:
 
         if BCs == 0:
                 DV[0] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (-self.Gs[0,0,x+1,y,z] + self.Gs[0,0,x,y,z] - self.Gs[0,1,x,y,z] + self.Gs[0,1,x,y-1,z] - self.Gs[0,2,x,y,z] + self.Gs[0,2,x,y,z-1])
+                        (2 / (self.Gp[0,x-1,y,z]+self.Gp[0,x,y,z])) *
+                        (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x,y,z] + self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y-1,z] + self.Gs[0,2,x,y,z] - self.Gs[0,2,x,y,z-1])
                         )
                 DV[1] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y,z] + self.Gs[1,2,x,y,z] -self.Gs[1,2,x,y,z-1])
+                        (2 / (self.Gp[0,x,y-1,z]+self.Gp[0,x,y,z])) *
+                        (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y,z-1])
                         )
                 DV[2] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z])
+                        (2 / (self.Gp[0,x,y,z-1]+self.Gp[0,x,y,z])) *
+                        (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] - self.Gs[2,2,x,y,z])
                         )
         elif BCs == 1:
             if x == self.MaxX: 
-                DV[0] = 0
-                DV[1] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y-1,z] + self.Gs[1,2,x,y,z+1] -self.Gs[1,2,x,y,z-1])
-                        )
-                DV[2] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[1,2,x,y+1,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z-1])
-                        )
+               pass
             elif x == 0: 
-                DV[0] = 0
-                DV[1] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y-1,z] + self.Gs[1,2,x,y,z+1] -self.Gs[1,2,x,y,z-1])
-                        )
-                DV[2] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[1,2,x,y+1,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z-1])
-                        )
+                pass
             elif y == self.MaxY: 
-                DV[0] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x-1,y,z] + self.Gs[0,2,x,y,z+1] -self.Gs[0,2,x,y,z-1])
-                        )
-                DV[1] = 0
-                DV[2] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[0,2,x+1,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z-1])
-                        )
+                pass
             elif y == 0: 
-                DV[0] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x-1,y,z] + self.Gs[0,2,x,y,z+1] -self.Gs[0,2,x,y,z-1])
-                        )
-                DV[1] = 0
-                DV[2] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[0,2,x+1,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z-1])
-                        )
+                pass
             elif z == self.MaxZ: 
-                DV[0] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x-1,y,z] + self.Gs[0,1,x,y+1,z] - self.Gs[0,1,x,y-1,z])
-                        )
-                DV[1] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[0,1,x+1,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y-1,z])
-                        )
-                DV[2] = 0
+                pass
             elif z == 0: 
-                DV[0] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x-1,y,z] + self.Gs[0,1,x,y+1,z] - self.Gs[0,1,x,y-1,z] )
-                        )
-                DV[1] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[0,1,x+1,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y-1,z])
-                        )
-                DV[2] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[0,2,x+1,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y+1,z] - self.Gs[1,2,x,y-1,z])
-                        )
+                pass
             else:
                 print(x,y,z,'BCs1 Error')
         elif BCs == 2:
             if (x == self.MaxX or x == 0) and (y == self.MaxY or y == 0): 
-                DV[0] = 0
-                DV[1] = 0
-                DV[2] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[2,2,x,y,z+1] -self.Gs[2,2,x,y,z-1])
-                        )
+                pass
             elif (x == self.MaxX or x == 0) and (z == self.MaxZ or z == 0): 
-                DV[0] = 0
-                DV[1] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y-1,z] )
-                        )
-                DV[2] = 0
+                pass
             elif (z == self.MaxZ or z == 0) and (y == self.MaxY or y == 0): 
-                DV[0] = ((1 / self.ds ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x-1,y,z])
-                        )
-                DV[1] = 0
-                DV[2] = 0
+                pass
             else:
                 print(x,y,z,'BCs2 Error')
         else:
@@ -298,7 +232,7 @@ class EFIT:
 
         for i in range(3):
                 for j in range(3):
-                    self.Gs[i,j,x,y,z] +=  delS[i,j] * self.ts
+                    self.Gs[j,i,x,y,z] +=  delS[j,i] * self.ts
         #self.Gs[:,:,x,y,z] += delS[:,:] * self.ts
 
         return self
@@ -317,7 +251,7 @@ class EFIT:
 
         return self
     
-    def ForcingFunctionWave(self, t, Hz = 40000, EP=100):
+    def ForcingFunctionWave(self, t, Hz = 40000, EP=100, size=0.04, Odim = 2, Dir=1):
         # Adds stresses from a force to the stress grid
         # Initially assumed a single force of a small plate sinosoidal ultrasound emitter.  More to be added later
         # 
@@ -333,28 +267,47 @@ class EFIT:
         ##run for two periods and then stop:
         #if 2.0 / frequency < t:
             
-        EmitterWidth = 0.04 / self.ds
+        EmitterWidth = size / self.ds
         EmitterWidth = int(EmitterWidth)
-        if EmitterWidth == 0: EmitterWidth = 4
+        if EmitterWidth == 0: EmitterWidth = 2
 
         #emitter placed in middle of top face
         
-        StartX = int(self.MaxX / 2 - EmitterWidth / 2)
-        StartZ = int(self.MaxZ / 2 - EmitterWidth / 2)
+        #StartX = int(self.MaxX / 2 - EmitterWidth / 2)
+        #StartZ = int(self.MaxZ / 2 - EmitterWidth / 2)
 
         Temp = np.zeros((EmitterWidth,EmitterWidth))
 
         Temp[:,:] = np.sin(frequency * t) * EmitterPreasure
 
-        self.Gv[1,StartX:StartX+EmitterWidth,self.MaxY-1,StartZ:StartZ+EmitterWidth] = Temp
-
+        if Odim == 0:
+            Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+            else:
+                self.Gv[0,1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+        elif Odim == 1:
+            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp
+            else:
+                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp
+        else:
+            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp
+            else:
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp
         return self
 
-    def ForcingFunctionImpulse(self, force = 100, emitter = 0.01):
+    def ForcingFunctionImpulse(self, force = 100, emitter = 0.01, Odim = 2, Dir=1):
         # Adds stresses from a force to the stress grid
         # Initially assumed a single force of a small plate sinosoidal ultrasound emitter.  More to be added later
         # 
-        # Input is the time
+        # Input is the time, impulse, square emitter size, what face it is on, and if it is top or bottom
         #
         # Outputs: no direct outputs, last time step stress is updated
 
@@ -362,16 +315,33 @@ class EFIT:
         EmitterWidth = int(EmitterWidth)
         if EmitterWidth == 0: EmitterWidth = 1
 
-        #emitter placed in middle of top face
         
-        StartX = int((self.MaxX / 2) - (EmitterWidth / 2))
-        StartZ = int((self.MaxZ / 2) - (EmitterWidth / 2))
-
         Temp = np.zeros((EmitterWidth,EmitterWidth))
 
         Temp[:,:] = -force
 
-        self.Gv[1,StartX:StartX+EmitterWidth,self.MaxY-1,StartZ:StartZ+EmitterWidth] = Temp
+        if Odim == 0:
+            Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+            else:
+                self.Gv[0,1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+        elif Odim == 1:
+            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp
+            else:
+                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp
+        else:
+            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp
+            else:
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp
+
 
         return self
 
@@ -390,45 +360,50 @@ class EFIT:
             if location > self.MaxX or location < 0: location = -1
             if location == -1:
                 location = int(self.MaxX / 2)
+            Component0 = np.matrix((self.MaxY, self.MaxZ))
             Component1 = np.matrix((self.MaxY, self.MaxZ))
             Component2 = np.matrix((self.MaxY, self.MaxZ))
 
+            Component0 = self.Gv[0,location,:,:]
             Component1 = self.Gv[1,location,:,:]
             Component2 = self.Gv[2,location,:,:]
             
-            Results = Component1 + Component2
-            #Results = np.sqrt(np.add(np.multiply(Component1,Component1),np.multiply(Component2,Component2)))
+            #Results = Component1 #+ Component2
+            Results = np.sqrt(Component0**2+Component1**2+Component2**2)
 
         if Dimm == 1:
             if location > self.MaxY or location < 0: location = -1
             if location == -1:
                 location = int(self.MaxY / 2)
+            Component0 = np.matrix((self.MaxX, self.MaxZ))
             Component1 = np.matrix((self.MaxX, self.MaxZ))
             Component2 = np.matrix((self.MaxX, self.MaxZ))
 
-            Component1 = self.Gv[0,:,location,:]
+            Component0 = self.Gv[0,:,location,:]
+            Component1 = self.Gv[1,:,location,:]
             Component2 = self.Gv[2,:,location,:]
             
-            Results = Component1 + Component2
-            # Results = np.sqrt(np.add(np.multiply(Component1,Component1),np.multiply(Component2,Component2)))
-            
+            #Results = Component1 #+ Component2
+            Results = np.sqrt(Component0**2+Component1**2+Component2**2)
+
         if Dimm == 2:
             if location > self.MaxZ or location < 0: location = -1
             if location == -1:
                 location = int(self.MaxZ / 2)
+            Component0 = np.matrix((self.MaxX, self.MaxY))
             Component1 = np.matrix((self.MaxX, self.MaxY))
             Component2 = np.matrix((self.MaxX, self.MaxY))
 
-            Component1 = self.Gv[0,:,:,location]
-            Component2 = self.Gv[1,:,:,location]
+            Component0 = self.Gv[0,:,:,location]
+            Component1 = self.Gv[1,:,:,location]
+            Component2 = self.Gv[2,:,:,location]
             
-            Results = Component1 + Component2
-            #Results = np.sqrt(np.add(np.multiply(Component1,Component1),np.multiply(Component2,Component2)))
-            
+            #Results = Component1 #+ Component2
+            Results = np.sqrt(Component0**2+Component1**2+Component2**2)            
 
         return Results
 
-    def StressCut(self, Dimm, Dimm1, Dimm2, location = -1):
+    def StressCut(self, Dimm=0, Dimm1=0, Dimm2=0, location = -1):
         #Gets a cut of the magnitude of stress on the give face and direction, cut at the location given in location
         #
         # Inputs: Dimm is the dimmension to make the cut across
