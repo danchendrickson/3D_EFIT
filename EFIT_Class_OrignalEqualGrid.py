@@ -539,7 +539,7 @@ class EFIT:
 
         return self
 
-    def VelocityCut(self, Dimm, Component = -1, location = -1):
+    def VelocityCut(self, Dimm = 0, Component = -1, location = -1):
         #Gets a cut of the magnitude of velocity in a plane defined by the two dimmension, cut at the location given in location
         #
         # Inputs: Dimm is the dimmension that is orthoganl to the plane that will be reutrned.
@@ -562,19 +562,6 @@ class EFIT:
             Component1 = self.Gv[1,location,:,:]
             Component2 = self.Gv[2,location,:,:]
             
-            #Results = Component1 #+ Component2
-            if Component == -1:
-                Results = np.sqrt(Component0**2+Component1**2+Component2**2)
-            elif Component == 0:
-                Results = Component0
-            elif Component == 1:
-                Results = Component1
-            elif Component == 2:
-                Results = Component2
-            else:
-                print('Invalid component')
-                Results = np.sqrt(Component0**2+Component1**2+Component2**2)
-
         if Dimm == 1:
             if location > self.MaxY or location < 0: location = -1
             if location == -1:
@@ -587,18 +574,6 @@ class EFIT:
             Component1 = self.Gv[1,:,location,:]
             Component2 = self.Gv[2,:,location,:]
             
-            #Results = Component1 #+ Component2
-            if Component == -1:
-                Results = np.sqrt(Component0**2+Component1**2+Component2**2)
-            elif Component == 0:
-                Results = Component0
-            elif Component == 1:
-                Results = Component1
-            elif Component == 2:
-                Results = Component2
-            else:
-                print('Invalid component')
-                Results = np.sqrt(Component0**2+Component1**2+Component2**2)
 
 
         if Dimm == 2:
@@ -613,18 +588,18 @@ class EFIT:
             Component1 = self.Gv[1,:,:,location]
             Component2 = self.Gv[2,:,:,location]
             
-            #Results = Component1 #+ Component2
-            if Component == -1:
-                Results = np.sqrt(Component0**2+Component1**2+Component2**2)
-            elif Component == 0:
-                Results = Component0
-            elif Component == 1:
-                Results = Component1
-            elif Component == 2:
-                Results = Component2
-            else:
-                print('Invalid component')
-                Results = np.sqrt(Component0**2+Component1**2+Component2**2)
+        #Results = Component1 #+ Component2
+        if Component == -1:
+            Results = np.sqrt(Component0**2+Component1**2+Component2**2)
+        elif Component == 0:
+            Results = Component0
+        elif Component == 1:
+            Results = Component1
+        elif Component == 2:
+            Results = Component2
+        else:
+            print('Invalid component')
+            Results = np.sqrt(Component0**2+Component1**2+Component2**2)
 
 
         return Results
