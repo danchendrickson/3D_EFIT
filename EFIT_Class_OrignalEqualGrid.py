@@ -491,7 +491,7 @@ class EFIT:
                 self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,0] = Temp
         return self
 
-    def ForcingFunctionImpulse(self, force = 100.0, emitter = 0.01, Odim = 2, Dir=1):
+    def ForcingFunctionImpulse(self, force = 100.0, emitter = 0.01, Odim = 2, Dir=1,CornerCut = 0):
         # Adds stresses from a force to the stress grid
         # Initially assumed a single force of a small plate sinosoidal ultrasound emitter.  More to be added later
         # 
@@ -501,40 +501,53 @@ class EFIT:
 
         EmitterWidth = emitter * self.ids
         EmitterWidth = int(EmitterWidth)
-        if EmitterWidth == 0: EmitterWidth = 1
+        if EmitterWidth <= 3: EmitterWidth = 3
 
-        
         Temp = np.zeros((EmitterWidth,EmitterWidth))
+        
+        EmmitterArea = EmitterWidth **2 - (4 * ((CornerCut*(CornerCut + 1)/2)))
 
-        Temp[:,:] = -force / 2.0
-
+        Temp[:,:] = -(force / EmmitterArea) / 2.0
+        if CornerCut >= EmitterWidth:
+            print('Corner Cut too large')
+            CornerCut = 0
+        if CornerCut > 0:
+            CutMatrix = np.zeros((CornerCut,CornerCut))
+            for j in range(CornerCut):
+                for k in range(CornerCut):
+                    if j < k: CutMatrix[j,k]=1
+            Temp[EmitterWidth-CornerCut:EmitterWidth,0:CornerCut] *= CutMatrix
+            Temp[EmitterWidth-CornerCut:EmitterWidth,EmitterWidth-CornerCut:EmitterWidth] *= np.flip(CutMatrix,1)
+            Temp[0:CornerCut,0:CornerCut] *= np.flip(CutMatrix,0)
+            Temp[0:CornerCut,EmitterWidth-CornerCut:EmitterWidth] *= np.flip(np.flip(CutMatrix,0),1)
+        
         if Odim == 0:
             Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
             if Dir ==1:
-                self.Gv[0,self.MaxX,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,self.MaxX,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,self.MaxX,Start0,Start0]
+                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,self.MaxX,Start0,Start0]
             else:
-                self.Gv[0,0,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[0,1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,0,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,0,self.MaxX,Start0,Start0]
+                self.Gv[0,1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,1,self.MaxX,Start0,Start0]
         elif Odim == 1:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
             if Dir ==1:
-                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
+                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
             else:
-                self.Gv[2,Start0:Start1+EmitterWidth,0,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,0,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
+                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
         else:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
             if Dir ==1:
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
             else:
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,0] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,0] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
 
 
         return self
@@ -573,9 +586,7 @@ class EFIT:
             Component0 = self.Gv[0,:,location,:]
             Component1 = self.Gv[1,:,location,:]
             Component2 = self.Gv[2,:,location,:]
-            
-
-
+ 
         if Dimm == 2:
             if location > self.MaxZ or location < 0: location = -1
             if location == -1:
@@ -654,15 +665,17 @@ class EFIT:
         return Results
 
     def VelocitySave(self, Dimm = -1):
+        Component0 = self.Gv[0,:,:,:]
+        Component1 = self.Gv[1,:,:,:]
+        Component2 = self.Gv[2,:,:,:]
         if Dimm == -1:
-            Component0 = self.Gv[0,:,:,:]
-            Component1 = self.Gv[1,:,:,:]
-            Component2 = self.Gv[2,:,:,:]
-            
-            #Results = Component1 #+ Component2
             Results = np.sqrt(Component0**2+Component1**2+Component2**2)
-        elif Dimm == 0 or Dimm == 1 or Dimm == 2:
-            Results = self.Gv[Dimm,:,:,:]
+        elif Dimm == 0:
+            Results = np.sqrt(Component0**2)
+        elif Dimm == 1:
+            Results = np.sqrt(Component1**2)
+        elif Dimm == 2:
+            Results = np.sqrt(Component2**2)
         else:
             print('Error, unknown Dimm', Dimm)
         
