@@ -1,3 +1,4 @@
+#import limited
 import numpy as np
 import visvis as vv
 class EFIT:
@@ -251,18 +252,18 @@ class EFIT:
         if z == 0: BCs+=1
 
         if BCs == 0:
-                DV[0] = ((self.ids ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
-                        (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x,y,z] + self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y-1,z] + self.Gs[0,2,x,y,z] - self.Gs[0,2,x,y,z-1])
-                        )
-                DV[1] = ((self.ids ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
-                        (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y,z-1])
-                        )
-                DV[2] = ((self.ids ) *
-                        (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
-                        (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] - self.Gs[2,2,x,y,z])
-                        )
+            DV[0] = ((self.ids ) *
+                    (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+1,y,z])) *
+                    (self.Gs[0,0,x+1,y,z] - self.Gs[0,0,x,y,z] + self.Gs[0,1,x,y,z] - self.Gs[0,1,x,y-1,z] + self.Gs[0,2,x,y,z] - self.Gs[0,2,x,y,z-1])
+                    )
+            DV[1] = ((self.ids ) *
+                    (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y+1,z])) *
+                    (self.Gs[0,1,x,y,z] - self.Gs[0,1,x-1,y,z] + self.Gs[1,1,x,y+1,z] - self.Gs[1,1,x,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y,z-1])
+                    )
+            DV[2] = ((self.ids ) *
+                    (2 / (self.Gp[0,x,y,z]+self.Gp[0,x,y,z+1])) *
+                    (self.Gs[0,2,x,y,z] - self.Gs[0,2,x-1,y,z] + self.Gs[1,2,x,y,z] - self.Gs[1,2,x,y-1,z] + self.Gs[2,2,x,y,z+1] - self.Gs[2,2,x,y,z])
+                    )
         elif BCs == 1:
             if x == 0:
                 DV[0] = -2.0 * self.Gs[0,0,x+1,y,z] * (1/self.Gp[0,x,y,z]) * self.ids
@@ -414,10 +415,13 @@ class EFIT:
 
         return self
     
-    def StepStresses(self):
-        for x in range(self.MaxX+1):
-            for y in range(self.MaxY+1):
-                for z in range(self.MaxZ+1):
+    def StepStresses(self,xx=1,yy=1,zz=1):
+        for i in range(self.MaxX-1):
+            x = i + xx
+            for j in range(self.MaxY-1):
+                y = j + yy
+                for k in range(self.MaxZ-1):
+                    z = k + zz
                     self.UpdateStresses(x,y,z)
         self.Gs[0,0,0,:,:] = -self.Gs[0,0,1,:,:]
         self.Gs[1,1,:,0,:] = -self.Gs[1,1,:,1,:]
@@ -425,11 +429,38 @@ class EFIT:
         self.Gs[0,0,self.MaxX,:,:] = -self.Gs[0,0,self.MaxX-1,:,:]
         self.Gs[1,1,:,self.MaxY,:] = -self.Gs[1,1,:,self.MaxY-1,:]
         self.Gs[2,2,:,:,self.MaxZ] = -self.Gs[2,2,:,:,self.MaxZ-1]
+        self.Gs[0,1,self.MaxX-1,:,:]=0
+        self.Gs[0,2,self.MaxX-1,:,:]=0
+        self.Gs[1,0,self.MaxX-1,:,:]=0
+        self.Gs[1,2,self.MaxX-1,:,:]=0
+        self.Gs[1,0,:,self.MaxY-1,:]=0
+        self.Gs[1,2,:,self.MaxY-1,:]=0
+        self.Gs[0,1,:,self.MaxY-1,:]=0
+        self.Gs[2,1,:,self.MaxY-1,:]=0
+        self.Gs[2,0,:,:,self.MaxZ-1]=0
+        self.Gs[2,1,:,:,self.MaxZ-1]=0
+        self.Gs[0,2,:,:,self.MaxZ-1]=0
+        self.Gs[1,2,:,:,self.MaxZ-1]=0
+        self.Gs[0,1,0,:,:]=0
+        self.Gs[0,2,0,:,:]=0
+        self.Gs[1,0,0,:,:]=0
+        self.Gs[1,2,0,:,:]=0
+        self.Gs[1,0,:,0,:]=0
+        self.Gs[1,2,:,0,:]=0
+        self.Gs[0,1,:,0,:]=0
+        self.Gs[2,1,:,0,:]=0
+        self.Gs[2,0,:,:,0]=0
+        self.Gs[2,1,:,:,0]=0
+        self.Gs[0,2,:,:,0]=0
+        self.Gs[1,2,:,:,0]=0
 
-    def StepVelocities(self):
-        for x in range(self.MaxX+1):
-            for y in range(self.MaxY+1):
-                for z in range(self.MaxZ+1):
+    def StepVelocities(self,xx=1,yy=1,zz=1):
+        for i in range(self.MaxX-1):
+            x = i + xx
+            for k in range(self.MaxY-1):
+                y = k + yy
+                for j in range(self.MaxZ-1):
+                    z = j + zz
                     self.UpdateVelocity(x,y,z)
         self.Gv[:,:,:,0]=0
 
@@ -526,29 +557,65 @@ class EFIT:
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
             if Dir ==1:
                 self.Gv[0,self.MaxX,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,self.MaxX,Start0,Start0]
-                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,self.MaxX,Start0,Start0]
             else:
                 self.Gv[0,0,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,0,self.MaxX,Start0,Start0]
-                self.Gv[0,1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,1,self.MaxX,Start0,Start0]
         elif Odim == 1:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
             if Dir ==1:
                 self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
-                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
             else:
                 self.Gv[2,Start0:Start1+EmitterWidth,0,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
-                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
         else:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
             if Dir ==1:
                 self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
+            else:
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,0] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
+
+        EmitterWidth -= 2
+        
+        Temp = np.zeros((EmitterWidth,EmitterWidth))
+        
+        EmmitterArea = EmitterWidth **2 - (4 * ((CornerCut*(CornerCut + 1)/2)))
+
+        Temp[:,:] = -(force / EmmitterArea) / 2.0
+        if CornerCut >= EmitterWidth:
+            print('Corner Cut too large')
+            CornerCut = 0
+        if CornerCut > 0:
+            CutMatrix = np.zeros((CornerCut,CornerCut))
+            for j in range(CornerCut):
+                for k in range(CornerCut):
+                    if j < k: CutMatrix[j,k]=1
+            Temp[EmitterWidth-CornerCut:EmitterWidth,0:CornerCut] *= CutMatrix
+            Temp[EmitterWidth-CornerCut:EmitterWidth,EmitterWidth-CornerCut:EmitterWidth] *= np.flip(CutMatrix,1)
+            Temp[0:CornerCut,0:CornerCut] *= np.flip(CutMatrix,0)
+            Temp[0:CornerCut,EmitterWidth-CornerCut:EmitterWidth] *= np.flip(np.flip(CutMatrix,0),1)
+
+        if Odim == 0:
+            Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,self.MaxX,Start0,Start0]
+            else:
+                self.Gv[0,1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,1,self.MaxX,Start0,Start0]
+        elif Odim == 1:
+            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            if Dir ==1:
+                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
+            else:
+                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp / self.Gp[0,Start0,self.MaxY,Start0]
+        else:
+            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
+            Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
+            if Dir ==1:
                 self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
             else:
                 self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,0] = Temp / self.Gp[0,Start0,Start0,self.MaxZ]
-
+ 
 
         return self
 
