@@ -128,15 +128,17 @@ class EFIT:
                 h2[j]=1*mm[j]
 
                 if i != j:
-                    Ds[i,j] =  (
-                        (self.ids) *
-                        (4/((1/self.Gp[2,x,y,z])
+                    Ds[i,j] =  (self.ids) * (
+                        4/( (1/self.Gp[2,x,y,z])
                             +(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
                             +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])
-                            +(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]]))) *
-                        (self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-self.Gv[i,x,y,z] 
-                         + self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-self.Gv[j,x,y,z] )
+                            +(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]])
+                            )
+                        ) * (
+                            (self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-self.Gv[i,x,y,z])
+                            + (self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-self.Gv[j,x,y,z])
                         )
+                        
         
 
         return Ds
