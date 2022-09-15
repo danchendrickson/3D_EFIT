@@ -1,7 +1,7 @@
 #import limited
 from zlib import Z_DEFAULT_COMPRESSION
 import numpy as np
-import visvis as vv
+#import visvis as vv
 class EFIT:
     ts = 0
     ds = 0
@@ -116,7 +116,8 @@ class EFIT:
             uu=np.roll(mm,i)
             Ds[i,i] =  ((self.ids) *
                 ((Lame1+2*Lame2)*(uu[0]*self.Gv[0,x,y,z]-uu[0]*self.Gv[0,x+d1[0],y+d1[1],z+d2[2]]) +
-                    Lame1*((uu[1]*self.Gv[1,x,y,z]-uu[1]*self.Gv[1,x+d2[0],y+d2[1],z+d2[2]])+(uu[2]*self.Gv[2,x,y,z]-uu[2]*self.Gv[2,x+d3[0],y+d3[1],z+d3[3]]))
+                    Lame1*((uu[1]*self.Gv[1,x,y,z]-uu[1]*self.Gv[1,x+d2[0],y+d2[1],z+d2[2]])
+                           +(uu[2]*self.Gv[2,x,y,z]-uu[2]*self.Gv[2,x+d3[0],y+d3[1],z+d3[2]]))
                     )
                 )
 
@@ -129,9 +130,12 @@ class EFIT:
                 if i != j:
                     Ds[i,j] =  (
                         (self.ids) *
-                        (4/((1/self.Gp[2,x,y,z])+(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
-                            +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])+(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]]))) *
-                        (self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-self.Gv[i,x,y,z] + self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-self.Gv[j,x,y,z] )
+                        (4/((1/self.Gp[2,x,y,z])
+                            +(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
+                            +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])
+                            +(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]]))) *
+                        (self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-self.Gv[i,x,y,z] 
+                         + self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-self.Gv[j,x,y,z] )
                         )
         
 
@@ -254,6 +258,9 @@ class EFIT:
         # Input:   t is the time
         #          Hz is the frequency of the signal
         #          EP is the force / density
+        #          size is in meters the size of the emitter plate
+        #          Odim is the dimmension the actio is workig on
+        #          dir is for 1 max serface, 2 for middle of dimmension, other for min surface
         #
         # Outputs: no direct outputs, last time step stress is updated
 
@@ -279,30 +286,42 @@ class EFIT:
         if Odim == 0:
             Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            Start2 = int((self.MaxX / 2) - (1))
             if Dir ==1:
                 self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[0,self.MaxX,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,self.MaxX-2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+            elif Dir ==2:
+                self.Gv[0,Start2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,Start2-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
             else:
-                self.Gv[0,0,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[0,1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,3,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
         elif Odim == 1:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
+            Start2 = int((self.MaxY / 2) - (1))
             if Dir ==1:
                 self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[1,Start0:Start1+EmitterWidth,self.Maxy-2,Start0:Start1+EmitterWidth] = Temp
+            elif Dir == 2:
+                self.Gv[1,Start0:Start1+EmitterWidth,Start2,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[1,Start0:Start1+EmitterWidth,Start2-1,Start0:Start1+EmitterWidth] = Temp
             else:
                 self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,0,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,2,Start0:Start1+EmitterWidth] = Temp
         else:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
+            Start2 = int((self.MaxZ / 2) - (1))
             if Dir ==1:
                 self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-2] = Temp
+            elif Dir ==2:
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2-1] = Temp
             else:
                 self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,0] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,2] = Temp
         return self
 
     def ForcingFunctionImpulse(self, force = 100.0, emitter = 0.01, Odim = 2, Dir=1,CornerCut = 0):
