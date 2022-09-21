@@ -121,23 +121,29 @@ class EFIT:
                     )
                 )
 
+            
             for j in range(3):
                 h1 = [0,0,0]
-                h2=h1
+                h2 = [0,0,0]
                 h1[i]=1*mm[i]
                 h2[j]=1*mm[j]
-
-                if i != j:
-                    Ds[i,j] =  (self.ids) * (
-                        4/( (1/self.Gp[2,x,y,z])
-                            +(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
-                            +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])
-                            +(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]])
+                
+                
+                try:
+                    if i != j:
+                        Ds[i,j] =  (self.ids) * (
+                            4/(  (1/self.Gp[2,x,y,z])
+                                +(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
+                                +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])
+                                +(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]])
+                                )
+                            ) * (
+                                (mm[i]*self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-mm[i]*self.Gv[i,x,y,z])
+                                + (mm[j]*self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-mm[j]*self.Gv[j,x,y,z])
                             )
-                        ) * (
-                            (self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-self.Gv[i,x,y,z])
-                            + (self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-self.Gv[j,x,y,z])
-                        )
+                except:
+                    raise ValueError('Indicies are funky', i, j, h1, h2, [x,y,z],[self.MaxX,self.MaxY,self.MaxZ])
+                    print(err.args)
                         
         
 
@@ -161,7 +167,7 @@ class EFIT:
             iS[i]=1 * dS[i]
             iM[i] = 0
             iM = np.multiply(iM, dS)
-            DV[0] = ((self.ids ) *
+            DV[i] = ((self.ids ) *
                 (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+iS[0],y+iS[1],z+iS[2]])) *
                 (
                     (self.Gs[0,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[0,i,x+iM[0],y+iM[1],z+iM[2]]) +
@@ -266,7 +272,7 @@ class EFIT:
         #
         # Outputs: no direct outputs, last time step stress is updated
 
-        frequency = Hz
+        frequency = 1/Hz
         EmitterPreasure = EP / 2.0
         
         ##run for two periods and then stop:
@@ -283,7 +289,7 @@ class EFIT:
 
         Temp = np.zeros((EmitterWidth,EmitterWidth))
 
-        Temp[:,:] = np.sin(frequency * t) * EmitterPreasure
+        Temp[:,:] = np.sin(t/frequency*2*3.1415926) * EmitterPreasure
 
         if Odim == 0:
             Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
