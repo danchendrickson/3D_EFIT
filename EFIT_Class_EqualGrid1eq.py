@@ -112,8 +112,9 @@ class EFIT:
 
             Ds[i,i] =  ((self.ids) *
                 ((Lame1+2*Lame2)*(self.Gv[((0+i)%3),x,y,z]-self.Gv[((0+i)%3),x+d0[0],y+d0[1],z+d0[2]]) +
-                        Lame1*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]])  +
-                               (self.Gv[((2+i)%3),x,y,z]-self.Gv[((2+i)%3),x+d2[0],y+d2[1],z+d2[2]]))
+                          Lame1*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]]) +
+                                 (self.Gv[((2+i)%3),x,y,z]-self.Gv[((2+i)%3),x+d2[0],y+d2[1],z+d2[2]])
+                                )
                     )
                 )
             
