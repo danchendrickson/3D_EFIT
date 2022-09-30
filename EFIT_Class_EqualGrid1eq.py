@@ -23,6 +23,10 @@ class EFIT:
         self.StPl = StressPlus
         self.VePl = VelocityPlus
         
+        self.lmbda=0
+        self.mu=0
+        self.rho=0
+        
         #define empty grid for the 3 directions of velocity for 2 time steps
         self.Gv = np.zeros(3*self.GridPoints,dtype="double").reshape(*self.GridShapeV)
         #define empty grid for the 3 directions of stress on 3 dimmensions of faces for 2 time steps
@@ -100,8 +104,8 @@ class EFIT:
         #Calculated stresses based on 3.55
         Ds = np.zeros((3,3))
         
-        Lame1=self.Gp[1,x,y,z]
-        Lame2=self.Gp[2,x,y,z]
+        #Lame1=self.Gp[1,x,y,z]
+        #Lame2=self.Gp[2,x,y,z]
 
         for i in range(3):
             d0=[0,0,0]
@@ -113,8 +117,8 @@ class EFIT:
             d2[((2+i)%3)] = -1
 
             Ds[i,i] =  ((self.ids) *
-                ((Lame1+2*Lame2)*(self.Gv[((0+i)%3),x,y,z]-self.Gv[((0+i)%3),x+d0[0],y+d0[1],z+d0[2]]) +
-                          Lame1*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]])  +
+                ((self.lmbda+2*self.mu)*(self.Gv[((0+i)%3),x,y,z]-self.Gv[((0+i)%3),x+d0[0],y+d0[1],z+d0[2]]) +
+                          self.lmbda*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]])  +
                                  (self.Gv[((2+i)%3),x,y,z]-self.Gv[((2+i)%3),x+d2[0],y+d2[1],z+d2[2]]))
                     )
                 )
@@ -129,13 +133,7 @@ class EFIT:
 
                 try:
                     if i != j:
-                        Ds[i,j] = (self.ids) * (
-                            4/(  (1/self.Gp[2,x,y,z])
-                                +(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
-                                +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])
-                                +(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]])
-                                )
-                            ) * (
+                        Ds[i,j] = (self.ids) * ( self.lmbda ) * (
                                 (self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-self.Gv[i,x,y,z]) + 
                                 (self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-self.Gv[j,x,y,z])
                             )
@@ -168,14 +166,12 @@ class EFIT:
             d[((1+i)%3)] = -1
             d[((2+i)%3)] = -1
             
-            DV[i] = ((self.ids ) *
-                (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+iS[0],y+iS[1],z+iS[2]])) *
-                (
+            DV[i] = ((self.ids ) / (self.rho) ) * (
                     (self.Gs[0,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[0,i,x+d[0],y,z]) +
                     (self.Gs[1,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[1,i,x,y+d[1],z]) + 
                     (self.Gs[2,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[2,i,x,y,z+d[2]])
                 )
-            )
+            
 
         return DV
     
