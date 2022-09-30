@@ -6,7 +6,7 @@ class EFIT:
     ts = 0
     ds = 0
 
-    def __init__(self, xGrid, yGrid, zGrid, tStep, dStep,xdir=1,ydir=1,zdir=1):
+    def __init__(self, xGrid, yGrid, zGrid, tStep, dStep,xdir=1,ydir=1,zdir=1, StressPlus = 1, VelocityPlus = 1):
         #Initialize with the size of the grid in X, Y, and Z number of nodes.  The distance step, and the time step
 
 
@@ -15,7 +15,7 @@ class EFIT:
         #Stresses with 3 part vector in each of 3 part phaces, at each nod epoint, for 2 time steps
         self.GridShapeS = (3,3,xGrid,yGrid,zGrid)
         #materials property gird.  Initially 3 properties needed: density, Lame 1, Lame 2
-        self.GridShapeP = (3,xGrid,yGrid,zGrid)
+        #self.GridShapeP = (3,xGrid,yGrid,zGrid)
 
         #total gird size
         self.GridPoints = (xGrid)*(yGrid)*(zGrid)
@@ -24,6 +24,12 @@ class EFIT:
         self.xDir = xdir
         self.yDir = ydir
         self.zDir = zdir
+        self.StPl = StressPlus
+        self.VePl = VelocityPlus
+        
+        self.Lmbda = 0
+        self.LaMue = 0
+        self.Rho = 0
         
         #define empty grid for the 3 directions of velocity for 2 time steps
         self.Gv = np.zeros(3*self.GridPoints,dtype="double").reshape(*self.GridShapeV)
@@ -31,7 +37,7 @@ class EFIT:
         self.Gs = np.zeros(3*3*self.GridPoints,dtype="double").reshape(*self.GridShapeS)
         #define empty grid for the 3 scalar material properties at each node point.  Can honly hold scalar properties
         #Assumed properties are density, Lame 1, Lame 2
-        self.Gp = np.zeros(3*self.GridPoints,dtype="double").reshape(*self.GridShapeP)
+        #self.Gp = np.zeros(3*self.GridPoints,dtype="double").reshape(*self.GridShapeP)
         
         self.MaxX = xGrid - 1
         self.MaxY = yGrid - 1
@@ -102,8 +108,8 @@ class EFIT:
         #Calculated stresses based on 3.55
         Ds = np.zeros((3,3))
         
-        Lame1=self.Gp[1,x,y,z]
-        Lame2=self.Gp[2,x,y,z]
+        lmbda=self.Lmbda
+        mu=self.LaMue
 
         mm = [self.xDir, self.yDir,self.zDir]
         d1=[0,0,0]
@@ -115,8 +121,8 @@ class EFIT:
             d3[(i+2) % 3] = -1 * mm[(i+2) % 3]
             uu=np.roll(mm,i)
             Ds[i,i] =  ((self.ids) *
-                ((Lame1+2*Lame2)*(uu[0]*self.Gv[i,x,y,z]-uu[0]*self.Gv[i,x+d1[0],y+d1[1],z+d2[2]]) +
-                    Lame1*((uu[1]*self.Gv[((i+1)%3),x,y,z]-uu[1]*self.Gv[((i+1)%3),x+d2[0],y+d2[1],z+d2[2]])
+                ((lmbda+2*mu)*(uu[0]*self.Gv[i,x,y,z]-uu[0]*self.Gv[i,x+d1[0],y+d1[1],z+d2[2]]) +
+                    lmbda*((uu[1]*self.Gv[((i+1)%3),x,y,z]-uu[1]*self.Gv[((i+1)%3),x+d2[0],y+d2[1],z+d2[2]])
                            +(uu[2]*self.Gv[((i+2)%3),x,y,z]-uu[2]*self.Gv[((i+2)%3),x+d3[0],y+d3[1],z+d3[2]]))
                     )
                 )
@@ -131,16 +137,10 @@ class EFIT:
                 
                 try:
                     if i != j:
-                        Ds[i,j] =  (self.ids) * (
-                            4/(  (1/self.Gp[2,x,y,z])
-                                +(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
-                                +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])
-                                +(1/self.Gp[2,x+h1[0]+h2[0],y+h1[1]+h2[1],z+h1[2]+h2[2]])
-                                )
-                            ) * (
-                                (mm[i]*self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-mm[i]*self.Gv[i,x,y,z])
-                                + (mm[j]*self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-mm[j]*self.Gv[j,x,y,z])
-                            )
+                        Ds[i,j] =  (self.ids) * ( mu ) * (
+                            (mm[i]*self.Gv[i,x+h2[0],y+h2[1],z+h2[2]]-mm[i]*self.Gv[i,x,y,z])
+                          + (mm[j]*self.Gv[j,x+h1[0],y+h1[1],z+h1[2]]-mm[j]*self.Gv[j,x,y,z])
+                        )
                 except:
                     raise ValueError('Indicies are funky', i, j, h1, h2, [x,y,z],[self.MaxX,self.MaxY,self.MaxZ])
                     print(err.args)
@@ -168,7 +168,8 @@ class EFIT:
             iM[i] = 0
             iM = np.multiply(iM, dS)
             DV[i] = ((self.ids ) *
-                (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+iS[0],y+iS[1],z+iS[2]])) *
+                #(2 / (self.Gp[0,x,y,z]+self.Gp[0,x+iS[0],y+iS[1],z+iS[2]])) *
+                ( 1 / self.Rho) *
                 (
                     (dS[0]*self.Gs[0,i,x+iS[0],y+iS[1],z+iS[2]] - dS[0]*self.Gs[0,i,x+iM[0],y+iM[1],z+iM[2]]) +
                     (dS[1]*self.Gs[1,i,x+iS[0],y+iS[1],z+iS[2]] - dS[1]*self.Gs[1,i,x+iM[0],y+iM[1],z+iM[2]]) + 
@@ -189,7 +190,7 @@ class EFIT:
 
         for i in range(3):
                 for j in range(3):
-                    self.Gs[j,i,x,y,z] +=  delS[j,i] * self.ts
+                    self.Gs[j,i,x,y,z] +=  self.StPl * delS[j,i] * self.ts
         #self.Gs[:,:,x,y,z] += delS[:,:] * self.ts
 
         return self
@@ -204,7 +205,7 @@ class EFIT:
         delV = self.DeltaVelocity(x,y,z)
 
         for i in range(3):
-            self.Gv[i,x,y,z] += delV[i] * self.ts
+            self.Gv[i,x,y,z] += self.VePl * delV[i] * self.ts
 
         return self
     
