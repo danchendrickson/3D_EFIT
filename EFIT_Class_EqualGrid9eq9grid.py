@@ -20,9 +20,13 @@ class EFIT:
         #total gird size
         self.GridPoints = (xGrid)*(yGrid)*(zGrid)
 
-        self.StPl = StressPlus
-        self.VePl = VelocityPlus
-        
+        self.StPl = 1
+        self.VePl = 1
+        self.axisX = 1
+        self.axisY = 1
+        self.axisZ = 1
+
+
         self.lmbda=0
         self.mu=0
         self.rho=0
@@ -37,7 +41,7 @@ class EFIT:
         self.GsZZ = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
         self.GsXY = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
         self.GsYZ = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
-        self.GsZX = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
+        self.GsXZ = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
         #define empty grid for the 3 scalar material properties at each node point.  Can honly hold scalar properties
         #Assumed properties are density, Lame 1, Lame 2
         #self.Gp = np.zeros(3*self.GridPoints,dtype="double").reshape(*self.GridShapeP)
@@ -90,7 +94,7 @@ class EFIT:
                 (self.GvY[x,y,z+1]-self.GvY[x,y,z]) + 
                 (self.GvZ[x,y+1,z]-self.GvZ[x,y,z])
             )
-        DsZX = (self.ids) * ( self.lmbda ) * (
+        DsXZ = (self.ids) * ( self.lmbda ) * (
                 (self.GvZ[x+1,y,z]-self.GvZ[x,y,z]) + 
                 (self.GvY[x,y,z+1]-self.GvX[x,y,z])
             )
@@ -100,9 +104,9 @@ class EFIT:
         #    raise ValueError('Opposite Stresses unequal', i, j, [x,y,z], Ds)
                     
 
-        return DsXX, DsYY, DsZZ, DsXY, DsYZ, DsZX
+        return DsXX, DsYY, DsZZ, DsXY, DsYZ, DsXZ
 
-    def DeltaVelocity(self, x,y,z):
+    def DeltaVelocity(self, x1,x2,x3):
         #Gets the change in the velocity per time at a certain coordinate juncture 
         #
         # Inputs: x,y,z coordinates of the cube in question.  Last time is assumed
@@ -112,19 +116,19 @@ class EFIT:
         #Calculated velocity based on 3.54
 
         DvX = ((self.ids ) / (self.rho) ) * (
-                (self.GsXX[x+1,y,z] - self.GsXX[x,y,z]) +
-                (self.GsXY[x,y,z] - self.GsXY[x,y-1,z]) + 
-                (self.GsZX[x,y,z] - self.GsZX[x,y,z-1])
+                (self.GsXX[x1+1,x2,x3] - self.GsXX[x1,x2,x3]) +
+                (self.GsXY[x1,x2,x3] - self.GsXY[x1,x2-1,x3]) + 
+                (self.GsXZ[x1,x2,x3] - self.GsXZ[x1,x2,x3-1])
             )            
         DvY = ((self.ids ) / (self.rho) ) * (
-                (self.GsXY[x,y,z] - self.GsXY[x-1,y,z]) +
-                (self.GsYY[x,y+1,z] - self.GsYY[x,y,z]) + 
-                (self.GsYZ[x,y,z] - self.GsYZ[x,y,z-1])
+                (self.GsXY[x1,x2,x3] - self.GsXY[x1-1,x2,x3]) +
+                (self.GsYY[x1,x2+1,x3] - self.GsYY[x1,x2,x3]) + 
+                (self.GsYZ[x1,x2,x3] - self.GsYZ[x1,x2,x3-1])
             )            
         DvZ = ((self.ids ) / (self.rho) ) * (
-                (self.GsZX[x,y,z] - self.GsZX[x-1,y,z]) +
-                (self.GsYZ[x,y,z] - self.GsYZ[x,y-1,z]) + 
-                (self.GsZZ[x,y,z+1] - self.GsZZ[x,y,z])
+                (self.GsXZ[x1,x2,x3] - self.GsXZ[x1-1,x2,x3]) +
+                (self.GsYZ[x1,x2,x3] - self.GsYZ[x1,x2-1,x3]) + 
+                (self.GsZZ[x1,x2,x3+1] - self.GsZZ[x1,x2,x3])
             )
             
 
@@ -137,14 +141,14 @@ class EFIT:
         #
         # Output: updated self.Gs matrix
         
-        DsXX, DsYY, DsZZ, DsXY, DsYZ, DsZX = self.DeltaStress(x,y,z)
+        DsXX, DsYY, DsZZ, DsXY, DsYZ, DsXZ = self.DeltaStress(x,y,z)
 
-        self.GsXX[x,y,z] +=  DsXX * self.ts * self.StPl 
-        self.GsYY[x,y,z] +=  DsYY * self.ts * self.StPl 
-        self.GsZZ[x,y,z] +=  DsZZ * self.ts * self.StPl 
-        self.GsXY[x,y,z] +=  DsXY * self.ts * self.StPl 
-        self.GsYZ[x,y,z] +=  DsYZ * self.ts * self.StPl 
-        self.GsZX[x,y,z] +=  DsZX * self.ts * self.StPl 
+        self.GsXX[x,y,z] +=  DsXX * self.ts * self.StPl * self.axisX
+        self.GsYY[x,y,z] +=  DsYY * self.ts * self.StPl * self.axisY
+        self.GsZZ[x,y,z] +=  DsZZ * self.ts * self.StPl * self.axisZ
+        self.GsXY[x,y,z] +=  DsXY * self.ts * self.StPl * self.axisX * self.axisY
+        self.GsYZ[x,y,z] +=  DsYZ * self.ts * self.StPl * self.axisZ * self.axisY
+        self.GsXZ[x,y,z] +=  DsXZ * self.ts * self.StPl * self.axisZ * self.axisX
 
         return self
 
@@ -157,9 +161,9 @@ class EFIT:
 
         DvX, DvY, DvZ = self.DeltaVelocity(x,y,z)
 
-        self.GvX[x,y,z] += DvX * self.VePl * self.ts
-        self.GvY[x,y,z] += DvY * self.VePl * self.ts
-        self.GvZ[x,y,z] += DvZ * self.VePl * self.ts
+        self.GvX[x,y,z] += DvX * self.ts * self.VePl * self.axisX
+        self.GvY[x,y,z] += DvY * self.ts * self.VePl * self.axisY
+        self.GvZ[x,y,z] += DvZ * self.ts * self.VePl * self.axisZ
 
         return self
     
@@ -180,22 +184,22 @@ class EFIT:
         self.GsZZ[:,:,self.MaxZ] = -self.GsZZ[:,:,self.MaxZ-1]
         self.GsXY[self.MaxX,:,:]=0
         self.GsYZ[self.MaxX,:,:]=0
-        self.GsZX[self.MaxX,:,:]=0
+        self.GsXZ[self.MaxX,:,:]=0
         self.GsXY[:,self.MaxY,:]=0
         self.GsYZ[:,self.MaxY,:]=0
-        self.GsZX[:,self.MaxY,:]=0
+        self.GsXZ[:,self.MaxY,:]=0
         self.GsXY[:,:,self.MaxZ]=0
         self.GsYZ[:,:,self.MaxZ]=0
-        self.GsZX[:,:,self.MaxZ]=0
+        self.GsXZ[:,:,self.MaxZ]=0
         self.GsXY[0,:,:]=0
         self.GsYZ[0,:,:]=0
-        self.GsZX[0,:,:]=0
+        self.GsXZ[0,:,:]=0
         self.GsXY[:,0,:]=0
         self.GsYZ[:,0,:]=0
-        self.GsZX[:,0,:]=0
+        self.GsXZ[:,0,:]=0
         self.GsXY[:,:,0]=0
         self.GsYZ[:,:,0]=0
-        self.GsZX[:,:,0]=0
+        self.GsXZ[:,:,0]=0
         
 
     def StepVelocities(self,xx=1,yy=1,zz=1):
