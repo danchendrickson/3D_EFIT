@@ -112,8 +112,8 @@ class EFIT:
 
             Ds[i,i] =  ((self.ids) *
                 ((Lame1+2*Lame2)*(self.Gv[((0+i)%3),x,y,z]-self.Gv[((0+i)%3),x+d0[0],y+d0[1],z+d0[2]]) +
-                        Lame1*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]])  +
-                               (self.Gv[((2+i)%3),x,y,z]-self.Gv[((2+i)%3),x+d2[0],y+d2[1],z+d2[2]]))
+                          Lame1*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]])  +
+                                 (self.Gv[((2+i)%3),x,y,z]-self.Gv[((2+i)%3),x+d2[0],y+d2[1],z+d2[2]]))
                     )
                 )
             
@@ -127,7 +127,7 @@ class EFIT:
 
                 try:
                     if i != j:
-                        Ds[i,j] =  (self.ids) * (
+                        Ds[i,j] = (self.ids) * (
                             4/(  (1/self.Gp[2,x,y,z])
                                 +(1/self.Gp[2,x+h1[0],y+h1[1],z+h1[2]])
                                 +(1/self.Gp[2,x+h2[0],y+h2[1],z+h2[2]])
@@ -141,7 +141,9 @@ class EFIT:
                     raise ValueError('Indicies are funky', i, j, h1, h2, [x,y,z],[self.MaxX,self.MaxY,self.MaxZ])
                     print(err.args)
                         
-        
+        #if Ds[0,1] != Ds[1,0] or Ds[0,2] != Ds[2,0] or Ds[1,2] != Ds[2,1]:
+        #    raise ValueError('Opposite Stresses unequal', i, j, [x,y,z], Ds)
+                    
 
         return Ds
 
@@ -159,17 +161,17 @@ class EFIT:
         for i in range(3):
             iS = [0,0,0]
             iS[i] = 1 
-            d=np.zeros((3,3),dtype=int)
+            d=[0,0,0]
 
-            d[((1+i)%3),((1+i)%3)] = -1
-            d[((2+i)%3),((2+i)%3)] = -1
+            d[((1+i)%3)] = -1
+            d[((2+i)%3)] = -1
             
             DV[i] = ((self.ids ) *
                 (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+iS[0],y+iS[1],z+iS[2]])) *
                 (
-                    (self.Gs[0,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[0,i,x+d[0,0],y+d[0,1],z+d[0,2]]) +
-                    (self.Gs[1,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[1,i,x+d[1,0],y+d[1,1],z+d[1,2]]) + 
-                    (self.Gs[2,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[2,i,x+d[2,0],y+d[2,1],z+d[2,2]])
+                    (self.Gs[0,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[0,i,x+d[0],y,z]) +
+                    (self.Gs[1,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[1,i,x,y+d[1],z]) + 
+                    (self.Gs[2,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[2,i,x,y,z+d[2]])
                 )
             )
 
@@ -220,18 +222,18 @@ class EFIT:
         self.Gs[0,0,self.MaxX,:,:] = -self.Gs[0,0,self.MaxX-1,:,:]
         self.Gs[1,1,:,self.MaxY,:] = -self.Gs[1,1,:,self.MaxY-1,:]
         self.Gs[2,2,:,:,self.MaxZ] = -self.Gs[2,2,:,:,self.MaxZ-1]
-        self.Gs[0,1,self.MaxX-1,:,:]=0
-        self.Gs[0,2,self.MaxX-1,:,:]=0
-        self.Gs[1,0,self.MaxX-1,:,:]=0
-        self.Gs[1,2,self.MaxX-1,:,:]=0
-        self.Gs[1,0,:,self.MaxY-1,:]=0
-        self.Gs[1,2,:,self.MaxY-1,:]=0
-        self.Gs[0,1,:,self.MaxY-1,:]=0
-        self.Gs[2,1,:,self.MaxY-1,:]=0
-        self.Gs[2,0,:,:,self.MaxZ-1]=0
-        self.Gs[2,1,:,:,self.MaxZ-1]=0
-        self.Gs[0,2,:,:,self.MaxZ-1]=0
-        self.Gs[1,2,:,:,self.MaxZ-1]=0
+        self.Gs[0,1,self.MaxX,:,:]=0
+        self.Gs[0,2,self.MaxX,:,:]=0
+        self.Gs[1,0,self.MaxX,:,:]=0
+        self.Gs[1,2,self.MaxX,:,:]=0
+        self.Gs[1,0,:,self.MaxY,:]=0
+        self.Gs[1,2,:,self.MaxY,:]=0
+        self.Gs[0,1,:,self.MaxY,:]=0
+        self.Gs[2,1,:,self.MaxY,:]=0
+        self.Gs[2,0,:,:,self.MaxZ]=0
+        self.Gs[2,1,:,:,self.MaxZ]=0
+        self.Gs[0,2,:,:,self.MaxZ]=0
+        self.Gs[1,2,:,:,self.MaxZ]=0
         self.Gs[0,1,0,:,:]=0
         self.Gs[0,2,0,:,:]=0
         self.Gs[1,0,0,:,:]=0

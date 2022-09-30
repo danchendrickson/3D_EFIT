@@ -115,9 +115,9 @@ class EFIT:
             d3[(i+2) % 3] = -1 * mm[(i+2) % 3]
             uu=np.roll(mm,i)
             Ds[i,i] =  ((self.ids) *
-                ((Lame1+2*Lame2)*(uu[0]*self.Gv[0,x,y,z]-uu[0]*self.Gv[0,x+d1[0],y+d1[1],z+d2[2]]) +
-                    Lame1*((uu[1]*self.Gv[1,x,y,z]-uu[1]*self.Gv[1,x+d2[0],y+d2[1],z+d2[2]])
-                           +(uu[2]*self.Gv[2,x,y,z]-uu[2]*self.Gv[2,x+d3[0],y+d3[1],z+d3[2]]))
+                ((Lame1+2*Lame2)*(uu[0]*self.Gv[i,x,y,z]-uu[0]*self.Gv[i,x+d1[0],y+d1[1],z+d2[2]]) +
+                    Lame1*((uu[1]*self.Gv[((i+1)%3),x,y,z]-uu[1]*self.Gv[((i+1)%3),x+d2[0],y+d2[1],z+d2[2]])
+                           +(uu[2]*self.Gv[((i+2)%3),x,y,z]-uu[2]*self.Gv[((i+2)%3),x+d3[0],y+d3[1],z+d3[2]]))
                     )
                 )
 
@@ -170,9 +170,9 @@ class EFIT:
             DV[i] = ((self.ids ) *
                 (2 / (self.Gp[0,x,y,z]+self.Gp[0,x+iS[0],y+iS[1],z+iS[2]])) *
                 (
-                    (self.Gs[0,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[0,i,x+iM[0],y+iM[1],z+iM[2]]) +
-                    (self.Gs[1,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[1,i,x+iM[0],y+iM[1],z+iM[2]]) + 
-                    (self.Gs[2,i,x+iS[0],y+iS[1],z+iS[2]] - self.Gs[2,i,x+iM[0],y+iM[1],z+iM[2]])
+                    (dS[0]*self.Gs[0,i,x+iS[0],y+iS[1],z+iS[2]] - dS[0]*self.Gs[0,i,x+iM[0],y+iM[1],z+iM[2]]) +
+                    (dS[1]*self.Gs[1,i,x+iS[0],y+iS[1],z+iS[2]] - dS[1]*self.Gs[1,i,x+iM[0],y+iM[1],z+iM[2]]) + 
+                    (dS[2]*self.Gs[2,i,x+iS[0],y+iS[1],z+iS[2]] - dS[2]*self.Gs[2,i,x+iM[0],y+iM[1],z+iM[2]])
                 )
             )
 
