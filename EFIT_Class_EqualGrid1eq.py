@@ -6,7 +6,7 @@ class EFIT:
     ts = 0
     ds = 0
 
-    def __init__(self, xGrid, yGrid, zGrid, tStep, dStep):
+    def __init__(self, xGrid, yGrid, zGrid, tStep, dStep,StressPlus = 1,VelocityPlus=1):
         #Initialize with the size of the grid in X, Y, and Z number of nodes.  The distance step, and the time step
 
 
@@ -20,6 +20,8 @@ class EFIT:
         #total gird size
         self.GridPoints = (xGrid)*(yGrid)*(zGrid)
 
+        self.StPl = StressPlus
+        self.VePl = VelocityPlus
         
         #define empty grid for the 3 directions of velocity for 2 time steps
         self.Gv = np.zeros(3*self.GridPoints,dtype="double").reshape(*self.GridShapeV)
@@ -112,14 +114,8 @@ class EFIT:
 
             Ds[i,i] =  ((self.ids) *
                 ((Lame1+2*Lame2)*(self.Gv[((0+i)%3),x,y,z]-self.Gv[((0+i)%3),x+d0[0],y+d0[1],z+d0[2]]) +
-<<<<<<< HEAD
                           Lame1*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]])  +
                                  (self.Gv[((2+i)%3),x,y,z]-self.Gv[((2+i)%3),x+d2[0],y+d2[1],z+d2[2]]))
-=======
-                          Lame1*((self.Gv[((1+i)%3),x,y,z]-self.Gv[((1+i)%3),x+d1[0],y+d1[1],z+d1[2]]) +
-                                 (self.Gv[((2+i)%3),x,y,z]-self.Gv[((2+i)%3),x+d2[0],y+d2[1],z+d2[2]])
-                                )
->>>>>>> 32529ad56a6355a4f8df038870a958dc9bdef447
                     )
                 )
             
@@ -194,7 +190,7 @@ class EFIT:
 
         for i in range(3):
                 for j in range(3):
-                    self.Gs[j,i,x,y,z] +=  delS[j,i] * self.ts
+                    self.Gs[j,i,x,y,z] +=  self.StPl*delS[j,i] * self.ts
         #self.Gs[:,:,x,y,z] += delS[:,:] * self.ts
 
         return self
@@ -209,7 +205,7 @@ class EFIT:
         delV = self.DeltaVelocity(x,y,z)
 
         for i in range(3):
-            self.Gv[i,x,y,z] += delV[i] * self.ts
+            self.Gv[i,x,y,z] += self.VePl*delV[i] * self.ts
 
         return self
     
