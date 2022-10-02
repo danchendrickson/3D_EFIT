@@ -6,25 +6,25 @@ class EFIT:
     ts = 0
     ds = 0
 
-    def __init__(self, xGrid, yGrid, zGrid, tStep, dStep,StressPlus = 1,VelocityPlus=1):
+    def __init__(self, Grid1, Grid2, Grid3, tStep, dStep,StressPlus = 1,VelocityPlus=1):
         #Initialize with the size of the grid in X, Y, and Z number of nodes.  The distance step, and the time step
 
 
         #Velocity grid with 3 part vector at each node point, for 2 time steps
-        self.GridShapeV = (xGrid,yGrid,zGrid)
+        self.GridShape = (Grid1,Grid2,Grid3)
         #Stresses with 3 part vector in each of 3 part phaces, at each nod epoint, for 2 time steps
-        self.GridShapeS = (xGrid,yGrid,zGrid)
+        self.GridShapeS = (Grid1,Grid2,Grid3)
         #materials property gird.  Initially 3 properties needed: density, Lame 1, Lame 2
         #self.GridShapeP = (3,xGrid,yGrid,zGrid)
 
         #total gird size
-        self.GridPoints = (xGrid)*(yGrid)*(zGrid)
+        self.GridPoints = (Grid1)*(Grid2)*(Grid3)
 
         self.StPl = 1
         self.VePl = 1
-        self.axisX = 1
-        self.axisY = 1
-        self.axisZ = 1
+        self.axis1 = 1
+        self.axis2 = 1
+        self.axis3 = 1
 
 
         self.lmbda=0
@@ -32,30 +32,30 @@ class EFIT:
         self.rho=0
         
         #define empty grid for the 3 directions of velocity for 2 time steps
-        self.GvX = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeV)
-        self.GvY = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeV)
-        self.GvZ = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeV)
+        self.Gv1 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
+        self.Gv2 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
+        self.Gv3 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
         #define empty grid for the 3 directions of stress on 3 dimmensions of faces for 2 time steps
-        self.GsXX = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
-        self.GsYY = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
-        self.GsZZ = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
-        self.GsXY = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
-        self.GsYZ = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
-        self.GsXZ = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShapeS)
+        self.Gs11 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
+        self.Gs22 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
+        self.Gs33 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
+        self.Gs12 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
+        self.Gs23 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
+        self.Gs31 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
         #define empty grid for the 3 scalar material properties at each node point.  Can honly hold scalar properties
         #Assumed properties are density, Lame 1, Lame 2
         #self.Gp = np.zeros(3*self.GridPoints,dtype="double").reshape(*self.GridShapeP)
         
-        self.MaxX = xGrid - 1
-        self.MaxY = yGrid - 1
-        self.MaxZ = zGrid - 1
+        self.Max1 = Grid1 - 1
+        self.Max2 = Grid2 - 1
+        self.Max3 = Grid3 - 1
 
         self.ds = dStep
         self.ts = tStep
 
         self.ids = 1.0 / dStep
     
-    def DeltaStress(self,x,y,z):
+    def DeltaStress(self,x1,x2,x3):
         #Gets the change in the stresses per time at a certain coordinate juncture 
         #
         # Inputs: x,y,z coordinates of the cube in question.  Last time is assumed
@@ -68,35 +68,35 @@ class EFIT:
         #Lame1=self.Gp[1,x,y,z]
         #Lame2=self.Gp[2,x,y,z]
 
-        DsXX =  ((self.ids) *
-            ((self.lmbda+2*self.mu)*(self.GvX[x+1,y,z]-self.GvX[x,y,z]) +
-                        self.lmbda*((self.GvY[x,y,z]-self.GvY[x,y-1,z])  +
-                                    (self.GvZ[x,y,z]-self.GvZ[x,y,z-1]))
+        Ds11 =  ((self.ids) *
+            ((self.lmbda+2*self.mu)*(self.Gv1[x1,x2,x3]-self.Gv1[x1-1,x2,x3]) +
+                        self.lmbda*((self.Gv2[x1,x2,x3]-self.Gv2[x1,x2-1,x3]) +
+                                    (self.Gv3[x1,x2,x3]-self.Gv3[x1,x2,x3-1]))
                 )
             )
-        DsYY =  ((self.ids) *
-            ((self.lmbda+2*self.mu)*(self.GvY[x,y+1,z]-self.GvY[x,y,z]) +
-                        self.lmbda*((self.GvZ[x,y,z]-self.GvZ[x,y,z-1])  +
-                                    (self.GvX[x,y,z]-self.GvX[x-1,y,z]))
+        Ds22 =  ((self.ids) *
+            ((self.lmbda+2*self.mu)*(self.Gv2[x1,x2,x3]-self.Gv2[x1,x2-1,x3]) +
+                        self.lmbda*((self.Gv3[x1,x2,x3]-self.Gv3[x1,x2,x3-1]) +
+                                    (self.Gv1[x1,x2,x3]-self.Gv1[x1-1,x2,x3]))
                 )
             )
-        DsZZ =  ((self.ids) *
-            ((self.lmbda+2*self.mu)*(self.GvZ[x,y,z+1]-self.GvZ[x,y,z]) +
-                        self.lmbda*((self.GvX[x,y,z]-self.GvX[x-1,y,z])  +
-                                    (self.GvY[x,y,z]-self.GvY[x,y-1,z]))
+        Ds33 =  ((self.ids) *
+            ((self.lmbda+2*self.mu)*(self.Gv3[x1,x2,x3]-self.Gv3[x1,x2,x3-1]) +
+                        self.lmbda*((self.Gv1[x1,x2,x3]-self.Gv1[x1-1,x2,x3]) +
+                                    (self.Gv2[x1,x2,x3]-self.Gv2[x1,x2-1,x3]))
                 )
             )
-        DsXY = (self.ids) * ( self.lmbda ) * (
-                (self.GvX[x,y+1,z]-self.GvX[x,y,z]) + 
-                (self.GvY[x+1,y,z]-self.GvY[x,y,z])
+        Ds12 = (self.ids) * ( self.lmbda ) * (
+                (self.Gv1[x1,x2+1,x3]-self.Gv1[x1,x2,x3]) + 
+                (self.Gv2[x1+1,x2,x3]-self.Gv2[x1,x2,x3])
             )
-        DsYZ = (self.ids) * ( self.lmbda ) * (
-                (self.GvY[x,y,z+1]-self.GvY[x,y,z]) + 
-                (self.GvZ[x,y+1,z]-self.GvZ[x,y,z])
+        Ds23 = (self.ids) * ( self.lmbda ) * (
+                (self.Gv2[x1,x2,x3+1]-self.Gv2[x1,x2,x3]) + 
+                (self.Gv3[x1,x2+1,x3]-self.Gv3[x1,x2,x3])
             )
-        DsXZ = (self.ids) * ( self.lmbda ) * (
-                (self.GvZ[x+1,y,z]-self.GvZ[x,y,z]) + 
-                (self.GvY[x,y,z+1]-self.GvX[x,y,z])
+        Ds31 = (self.ids) * ( self.lmbda ) * (
+                (self.Gv3[x1+1,x2,x3]-self.Gv3[x1,x2,x3]) + 
+                (self.Gv1[x1,x2,x3+1]-self.Gv1[x1,x2,x3])
             )
 
 
@@ -104,7 +104,7 @@ class EFIT:
         #    raise ValueError('Opposite Stresses unequal', i, j, [x,y,z], Ds)
                     
 
-        return DsXX, DsYY, DsZZ, DsXY, DsYZ, DsXZ
+        return Ds11, Ds22, Ds33, Ds12, Ds23, Ds31
 
     def DeltaVelocity(self, x1,x2,x3):
         #Gets the change in the velocity per time at a certain coordinate juncture 
@@ -115,24 +115,24 @@ class EFIT:
         
         #Calculated velocity based on 3.54
 
-        DvX = ((self.ids ) / (self.rho) ) * (
-                (self.GsXX[x1+1,x2,x3] - self.GsXX[x1,x2,x3]) +
-                (self.GsXY[x1,x2,x3] - self.GsXY[x1,x2-1,x3]) + 
-                (self.GsXZ[x1,x2,x3] - self.GsXZ[x1,x2,x3-1])
+        Dv1 = ((self.ids ) / (self.rho) ) * (
+                (self.Gs11[x1+1,x2,x3] - self.Gs11[x1,x2,x3]) +
+                (self.Gs12[x1,x2,x3] - self.Gs12[x1,x2-1,x3]) + 
+                (self.Gs31[x1,x2,x3] - self.Gs31[x1,x2,x3-1])
             )            
-        DvY = ((self.ids ) / (self.rho) ) * (
-                (self.GsXY[x1,x2,x3] - self.GsXY[x1-1,x2,x3]) +
-                (self.GsYY[x1,x2+1,x3] - self.GsYY[x1,x2,x3]) + 
-                (self.GsYZ[x1,x2,x3] - self.GsYZ[x1,x2,x3-1])
+        Dv2 = ((self.ids ) / (self.rho) ) * (
+                (self.Gs12[x1,x2,x3] - self.Gs12[x1-1,x2,x3]) +
+                (self.Gs22[x1,x2+1,x3] - self.Gs22[x1,x2,x3]) + 
+                (self.Gs23[x1,x2,x3] - self.Gs23[x1,x2,x3-1])
             )            
-        DvZ = ((self.ids ) / (self.rho) ) * (
-                (self.GsXZ[x1,x2,x3] - self.GsXZ[x1-1,x2,x3]) +
-                (self.GsYZ[x1,x2,x3] - self.GsYZ[x1,x2-1,x3]) + 
-                (self.GsZZ[x1,x2,x3+1] - self.GsZZ[x1,x2,x3])
+        Dv3 = ((self.ids ) / (self.rho) ) * (
+                (self.Gs31[x1,x2,x3] - self.Gs31[x1-1,x2,x3]) +
+                (self.Gs23[x1,x2,x3] - self.Gs23[x1,x2-1,x3]) + 
+                (self.Gs33[x1,x2,x3+1] - self.Gs33[x1,x2,x3])
             )
             
 
-        return DvX, DvY, DvZ
+        return Dv1, Dv2, Dv3
     
     def UpdateStresses(self, x,y,z):
         #Updates velocity based off of previous velocities and delta velocity times time
@@ -141,14 +141,14 @@ class EFIT:
         #
         # Output: updated self.Gs matrix
         
-        DsXX, DsYY, DsZZ, DsXY, DsYZ, DsXZ = self.DeltaStress(x,y,z)
+        Ds11, Ds22, Ds33, Ds12, Ds23, Ds31 = self.DeltaStress(x,y,z)
 
-        self.GsXX[x,y,z] +=  DsXX * self.ts * self.StPl * self.axisX
-        self.GsYY[x,y,z] +=  DsYY * self.ts * self.StPl * self.axisY
-        self.GsZZ[x,y,z] +=  DsZZ * self.ts * self.StPl * self.axisZ
-        self.GsXY[x,y,z] +=  DsXY * self.ts * self.StPl * self.axisX * self.axisY
-        self.GsYZ[x,y,z] +=  DsYZ * self.ts * self.StPl * self.axisZ * self.axisY
-        self.GsXZ[x,y,z] +=  DsXZ * self.ts * self.StPl * self.axisZ * self.axisX
+        self.Gs11[x,y,z] +=  Ds11 * self.ts * self.StPl * self.axis1
+        self.Gs22[x,y,z] +=  Ds22 * self.ts * self.StPl * self.axis2
+        self.Gs33[x,y,z] +=  Ds33 * self.ts * self.StPl * self.axis3
+        self.Gs12[x,y,z] +=  Ds12 * self.ts * self.StPl * self.axis1 * self.axis2
+        self.Gs23[x,y,z] +=  Ds23 * self.ts * self.StPl * self.axis2 * self.axis3
+        self.Gs31[x,y,z] +=  Ds31 * self.ts * self.StPl * self.axis3 * self.axis1
 
         return self
 
@@ -159,61 +159,61 @@ class EFIT:
         #
         # Output: updated self.Gs matrix
 
-        DvX, DvY, DvZ = self.DeltaVelocity(x,y,z)
+        Dv1, Dv2, Dv3 = self.DeltaVelocity(x,y,z)
 
-        self.GvX[x,y,z] += DvX * self.ts * self.VePl * self.axisX
-        self.GvY[x,y,z] += DvY * self.ts * self.VePl * self.axisY
-        self.GvZ[x,y,z] += DvZ * self.ts * self.VePl * self.axisZ
+        self.Gv1[x,y,z] += Dv1 * self.ts * self.VePl * self.axis1
+        self.Gv2[x,y,z] += Dv2 * self.ts * self.VePl * self.axis2
+        self.Gv3[x,y,z] += Dv3 * self.ts * self.VePl * self.axis3
 
         return self
     
-    def StepStresses(self,xx=1,yy=1,zz=1):
-        for i in range(self.MaxX-1):
-            x = i + xx
-            for j in range(self.MaxY-1):
-                y = j + yy
-                for k in range(self.MaxZ-1):
-                    z = k + zz
-                    self.UpdateStresses(x,y,z)
-        
-        self.GsXX[0,:,:] = -self.GsXX[1,:,:]
-        self.GsYY[:,0,:] = -self.GsYY[:,1,:]
-        self.GsZZ[:,:,0] = -self.GsZZ[:,:,1]
-        self.GsXX[self.MaxX,:,:] = -self.GsZZ[self.MaxX-1,:,:]
-        self.GsYY[:,self.MaxY,:] = -self.GsYY[:,self.MaxY-1,:]
-        self.GsZZ[:,:,self.MaxZ] = -self.GsZZ[:,:,self.MaxZ-1]
-        self.GsXY[self.MaxX,:,:]=0
-        self.GsYZ[self.MaxX,:,:]=0
-        self.GsXZ[self.MaxX,:,:]=0
-        self.GsXY[:,self.MaxY,:]=0
-        self.GsYZ[:,self.MaxY,:]=0
-        self.GsXZ[:,self.MaxY,:]=0
-        self.GsXY[:,:,self.MaxZ]=0
-        self.GsYZ[:,:,self.MaxZ]=0
-        self.GsXZ[:,:,self.MaxZ]=0
-        self.GsXY[0,:,:]=0
-        self.GsYZ[0,:,:]=0
-        self.GsXZ[0,:,:]=0
-        self.GsXY[:,0,:]=0
-        self.GsYZ[:,0,:]=0
-        self.GsXZ[:,0,:]=0
-        self.GsXY[:,:,0]=0
-        self.GsYZ[:,:,0]=0
-        self.GsXZ[:,:,0]=0
-        
+    def StepStresses(self,xx1=1,xx2=1,xx3=1):
+        for i in range(self.Max1-1):
+            x1 = i + xx1
+            for j in range(self.Max2-1):
+                x2 = j + xx2
+                for k in range(self.Max3-1):
+                    x3 = k + xx3
+                    self.UpdateStresses(x1,x2,x3)
+        '''
+        self.Gs11[0,:,:] = -self.Gs11[1,:,:]
+        self.Gs22[:,0,:] = -self.Gs22[:,1,:]
+        self.Gs33[:,:,0] = -self.Gs33[:,:,1]
+        self.Gs11[self.Max1,:,:] = -self.Gs11[self.Max1-1,:,:]
+        self.Gs22[:,self.Max2,:] = -self.Gs22[:,self.Max2-1,:]
+        self.Gs33[:,:,self.Max3] = -self.Gs33[:,:,self.Max3-1]
+        self.Gs12[self.Max1,:,:]=0
+        self.Gs23[self.Max1,:,:]=0
+        self.Gs31[self.Max1,:,:]=0
+        self.Gs12[:,self.Max2,:]=0
+        self.Gs23[:,self.Max2,:]=0
+        self.Gs31[:,self.Max2,:]=0
+        self.Gs12[:,:,self.Max3]=0
+        self.Gs23[:,:,self.Max3]=0
+        self.Gs31[:,:,self.Max3]=0
+        self.Gs12[0,:,:]=0
+        self.Gs23[0,:,:]=0
+        self.Gs31[0,:,:]=0
+        self.Gs12[:,0,:]=0
+        self.Gs23[:,0,:]=0
+        self.Gs31[:,0,:]=0
+        self.Gs12[:,:,0]=0
+        self.Gs23[:,:,0]=0
+        self.Gs31[:,:,0]=0
+                '''
 
-    def StepVelocities(self,xx=1,yy=1,zz=1):
-        for i in range(self.MaxX-1):
-            x = i + xx
-            for k in range(self.MaxY-1):
-                y = k + yy
-                for j in range(self.MaxZ-1):
-                    z = j + zz
-                    self.UpdateVelocity(x,y,z)
+    def StepVelocities(self,xx1=1,xx2=1,xx3=1):
+        for i in range(self.Max1-1):
+            x1 = i + xx1
+            for k in range(self.Max2-1):
+                x2 = k + xx2
+                for j in range(self.Max3-1):
+                    x3 = j + xx3
+                    self.UpdateVelocity(x1,x2,x3)
         #Boundary, floor is stationary
-        self.GvX[:,:,0]=0
-        self.GvY[:,:,0]=0
-        self.GvZ[:,:,0]=0
+        self.Gv1[:,:,0]=0
+        self.Gv2[:,:,0]=0
+        self.Gv3[:,:,0]=0
 
     def ForcingFunctionWave(self, t, Hz = 40000, EP=100.0, size=0.04, Odim = 2, Dir=1):
         # Adds stresses from a force to the stress grid
@@ -248,45 +248,45 @@ class EFIT:
         Temp[:,:] = np.sin(t/frequency*2*3.1415926) * EmitterPreasure
 
         if Odim == 0:
-            Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
-            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
-            Start2 = int((self.MaxX / 2) - (1))
+            Start0 = int((self.Max2 / 2) - (EmitterWidth / 2))
+            Start1 = int((self.Max3 / 2) - (EmitterWidth / 2))
+            Start2 = int((self.Max1 / 2) - (1))
             if Dir ==1:
-                self.GvX[self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.GvX[self.MaxX-2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv1[self.Max1-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv1[self.Max1-2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
             elif Dir ==2:
-                self.GvX[Start2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.GvX[Start2-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv1[Start2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv1[Start2-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
             else:
-                self.GvX[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.GvX[3,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv1[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv1[3,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
         elif Odim == 1:
-            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
-            Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
-            Start2 = int((self.MaxY / 2) - (1))
+            Start0 = int((self.Max1 / 2) - (EmitterWidth / 2))
+            Start1 = int((self.Max3 / 2) - (EmitterWidth / 2))
+            Start2 = int((self.Max2 / 2) - (1))
             if Dir ==1:
-                self.GvY[Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp
-                self.GvY[Start0:Start1+EmitterWidth,self.Maxy-2,Start0:Start1+EmitterWidth] = Temp
+                self.Gv2[Start0:Start1+EmitterWidth,self.Max2-1,Start0:Start1+EmitterWidth] = Temp
+                self.Gv2[Start0:Start1+EmitterWidth,self.Max2-2,Start0:Start1+EmitterWidth] = Temp
             elif Dir == 2:
-                self.GvY[Start0:Start1+EmitterWidth,Start2,Start0:Start1+EmitterWidth] = Temp
-                self.GvY[Start0:Start1+EmitterWidth,Start2-1,Start0:Start1+EmitterWidth] = Temp
+                self.Gv2[Start0:Start1+EmitterWidth,Start2,Start0:Start1+EmitterWidth] = Temp
+                self.Gv2[Start0:Start1+EmitterWidth,Start2-1,Start0:Start1+EmitterWidth] = Temp
             else:
-                self.GvY[Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp
-                self.GvY[Start0:Start1+EmitterWidth,2,Start0:Start1+EmitterWidth] = Temp
+                self.Gv2[Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp
+                self.Gv2[Start0:Start1+EmitterWidth,2,Start0:Start1+EmitterWidth] = Temp
         else:
-            Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
-            Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
-            Start2 = int((self.MaxZ / 2) - (1))
+            Start0 = int((self.Max1 / 2) - (EmitterWidth / 2))
+            Start1 = int((self.Max2 / 2) - (EmitterWidth / 2))
+            Start2 = int((self.Max3 / 2) - (1))
             if Dir ==1:
-                self.GvZ[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp
-                self.GvZ[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-2] = Temp
+                self.Gv3[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.Max3-1] = Temp
+                self.Gv3[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.Max3-2] = Temp
             elif Dir ==2:
-                self.GvZ[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2] = Temp
-                self.GvZ[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2-1] = Temp
+                self.Gv3[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2] = Temp
+                self.Gv3[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2-1] = Temp
             else:
-                self.GvZ[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp
-                self.GvZ[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,2] = Temp
-        return self
+                self.Gv3[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp
+                self.Gv3[Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,2] = Temp
+        return np.sum(Temp)
 
     def ForcingFunctionImpulse(self, force = 100.0, emitter = 0.01, Odim = 2, Dir=1,CornerCut = 0):
         # Adds stresses from a force to the stress grid
@@ -397,40 +397,40 @@ class EFIT:
         Results = []
 
         if Dimm == 0:
-            if location > self.MaxX or location < 0: location = -1
+            if location > self.Max1 or location < 0: location = -1
             if location == -1:
-                location = int(self.MaxX / 2)
-            Component0 = np.matrix((self.MaxY, self.MaxZ))
-            Component1 = np.matrix((self.MaxY, self.MaxZ))
-            Component2 = np.matrix((self.MaxY, self.MaxZ))
+                location = int(self.Max1 / 2)
+            Component0 = np.matrix((self.Max2, self.Max3))
+            Component1 = np.matrix((self.Max2, self.Max3))
+            Component2 = np.matrix((self.Max2, self.Max3))
 
-            Component0 = self.GvX[location,:,:]
-            Component1 = self.GvY[location,:,:]
-            Component2 = self.GvZ[location,:,:]
+            Component0 = self.Gv1[location,:,:]
+            Component1 = self.Gv2[location,:,:]
+            Component2 = self.Gv3[location,:,:]
             
         if Dimm == 1:
-            if location > self.MaxY or location < 0: location = -1
+            if location > self.Max2 or location < 0: location = -1
             if location == -1:
-                location = int(self.MaxY / 2)
-            Component0 = np.matrix((self.MaxX, self.MaxZ))
-            Component1 = np.matrix((self.MaxX, self.MaxZ))
-            Component2 = np.matrix((self.MaxX, self.MaxZ))
+                location = int(self.Max2 / 2)
+            Component0 = np.matrix((self.Max1, self.Max3))
+            Component1 = np.matrix((self.Max1, self.Max3))
+            Component2 = np.matrix((self.Max1, self.Max3))
 
-            Component0 = self.GvX[:,location,:]
-            Component1 = self.GvY[:,location,:]
-            Component2 = self.GvZ[:,location,:]
+            Component0 = self.Gv1[:,location,:]
+            Component1 = self.Gv2[:,location,:]
+            Component2 = self.Gv3[:,location,:]
  
         if Dimm == 2:
-            if location > self.MaxZ or location < 0: location = -1
+            if location > self.Max3 or location < 0: location = -1
             if location == -1:
-                location = int(self.MaxZ / 2)
-            Component0 = np.matrix((self.MaxX, self.MaxY))
-            Component1 = np.matrix((self.MaxX, self.MaxY))
-            Component2 = np.matrix((self.MaxX, self.MaxY))
+                location = int(self.Max3 / 2)
+            Component0 = np.matrix((self.Max1, self.Max3))
+            Component1 = np.matrix((self.Max1, self.Max3))
+            Component2 = np.matrix((self.Max1, self.Max3))
 
-            Component0 = self.GvX[:,:,location]
-            Component1 = self.GvY[:,:,location]
-            Component2 = self.GvZ[:,:,location]
+            Component0 = self.Gv1[:,:,location]
+            Component1 = self.Gv2[:,:,location]
+            Component2 = self.Gv3[:,:,location]
             
         #Results = Component1 #+ Component2
         if Component == -1:
@@ -498,9 +498,9 @@ class EFIT:
         return Results
 
     def VelocitySave(self, Dimm = -1):
-        Component0 = self.GvX[:,:,:]
-        Component1 = self.GvY[:,:,:]
-        Component2 = self.GvZ[:,:,:]
+        Component0 = self.Gv1[:,:,:]
+        Component1 = self.Gv2[:,:,:]
+        Component2 = self.Gv3[:,:,:]
         if Dimm == -1:
             Results = np.sqrt(Component0**2+Component1**2+Component2**2)
         elif Dimm == 0:
