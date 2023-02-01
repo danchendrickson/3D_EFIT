@@ -67,16 +67,19 @@ dtmax = 1/ (max(cl,ct) * np.sqrt(3/(min(omegal,omegat)/10)))
 # BeamLength = 0.3
 # BeamHeight = 0.0762
 # BeamWidth = 0.0381
-BeamLength = 0.02
+BeamLength = 0.2
 BeamHeight = 0.02
-BeamWidth = 0.02
+BeamWidth = 0.2
 
 #Run for 6 Cycles:
-runtime = 4.0 / frequency 
+runtime = 2.0 / frequency 
 
 #Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
-ts = 1 / frequency / 200  #  5e-08  #time step
+#ts = 1 / frequency / 200  #  5e-08  #time step
+
 gs = min(omegal, omegat) / 400    #grid step
+ts = gs / (sqrt(3) * np.max(cl,ct)) * 0.95 
+
 
 Tsteps = int(math.ceil(runtime / ts)) + 1       #total Time STeps
 

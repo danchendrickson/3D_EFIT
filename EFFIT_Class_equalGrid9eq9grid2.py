@@ -7,35 +7,34 @@ class EFIT:
     ds = 0
 
     def __init__(self, Grid1, Grid2, Grid3, tStep, dStep,StressPlus = 1,VelocityPlus=1):
-        #Initialize with the size of the grid in X, Y, and Z number of nodes.  The distance step, and the time step
+        #Initialize with the size of the grid in 3 dimmensions in number of nodes.  The distance step, and the time step
 
 
-        #Velocity grid with 3 part vector at each node point, for 2 time steps
+        #Grid shape is the 3 grid dimsions
         self.GridShape = (Grid1,Grid2,Grid3)
-        #Stresses with 3 part vector in each of 3 part phaces, at each nod epoint, for 2 time steps
-        self.GridShapeS = (Grid1,Grid2,Grid3)
-        #materials property gird.  Initially 3 properties needed: density, Lame 1, Lame 2
-        #self.GridShapeP = (3,xGrid,yGrid,zGrid)
 
         #total gird size
         self.GridPoints = (Grid1)*(Grid2)*(Grid3)
 
-        self.StPl = 1
-        self.VePl = 1
+        #MAybe to be used later, allows for some axis to be non right hand rule
+        self.StPl = StressPlus
+        self.VePl = VelocityPlus
         self.axis1 = 1
         self.axis2 = 1
         self.axis3 = 1
 
-
+        #Lame parameters and density set as 0, will need to be reset in code after object is created
         self.lmbda=0
         self.mu=0
         self.rho=0
         
-        #define empty grid for the 3 directions of velocity for 2 time steps
+        #define empty grid for the 3 directions of velocity
         self.Gv1 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
         self.Gv2 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
         self.Gv3 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
-        #define empty grid for the 3 directions of stress on 3 dimmensions of faces for 2 time steps
+        
+        #define empty grid for the 3 directions of stress on 3 dimmensions of faces, not that the two cross dimmensions
+        #are not included as the Stress 1-2 is equal to the Stress 2-1
         self.Gs11 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
         self.Gs22 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
         self.Gs33 = np.zeros(self.GridPoints,dtype="double").reshape(*self.GridShape)
@@ -58,15 +57,11 @@ class EFIT:
     def DeltaStress(self,x1,x2,x3):
         #Gets the change in the stresses per time at a certain coordinate juncture 
         #
-        # Inputs: x,y,z coordinates of the cube in question.  Last time is assumed
+        # Inputs: x1,x2,x3 coordinates of the cube in question.  Last time is assumed
         #
         # Outputs: 6 dimmensions of stress.  
         
         #Calculated stresses based on 3.55
-        #Ds = np.zeros((3,3))
-        
-        #Lame1=self.Gp[1,x,y,z]
-        #Lame2=self.Gp[2,x,y,z]
 
         Ds11 =  ((self.ids) *
             ((self.lmbda+2*self.mu)*(self.Gv1[x1,x2,x3]-self.Gv1[x1-1,x2,x3]) +
@@ -98,11 +93,6 @@ class EFIT:
                 (self.Gv3[x1+1,x2,x3]-self.Gv3[x1,x2,x3]) + 
                 (self.Gv1[x1,x2,x3+1]-self.Gv1[x1,x2,x3])
             )
-
-
-        #if Ds[0,1] != Ds[1,0] or Ds[0,2] != Ds[2,0] or Ds[1,2] != Ds[2,1]:
-        #    raise ValueError('Opposite Stresses unequal', i, j, [x,y,z], Ds)
-                    
 
         return Ds11, Ds22, Ds33, Ds12, Ds23, Ds31
 
