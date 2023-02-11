@@ -36,55 +36,7 @@ class EFIT:
 
         self.ids = 1.0 / dStep
 
-    def CheckStressBoundary(self,x,y,z,Ds):
-        #checks to see if a grid is at a boundary, and if so, adjusts boundary conditions appropriately
-        #
-        # Inputs: x,y,z coordinates of cube in question
-        #
-        # Outputs: Updated (if boundary) delta stress matrix
-
-        #at front and back faces, stresses perpendicular to the face are 0:
-        if x == 0 or x == self.MaxX-1:
-            Ds[0,0]=0
-            #Ds[0,1]=0
-            #Ds[0,2]=0
-        
-        #at top face, stresses perpendicular to the face are 0:
-        if y == self.MaxY-1:
-            #Ds[1,0]=0
-            Ds[1,1]=0
-            #Ds[1,2]=0
-        
-        if y == 0:
-            Ds[1,1]=-self.Gs[1,1,x,y+1,z]
-             
-        
-        #at side faces, stresses perpendicular to the face are 0:
-        if z == 0 or z == self.MaxZ-1:
-            #Ds[2,0]=0
-            #Ds[2,1]=0
-            Ds[2,2]=0
-        
-        return Ds
-
-    def CheckVelocityBoundary(self,x,y,z,Dv):
-        #checks to see if a grid is at a boundary, and if so, adjusts boundary conditions appropriately
-        #
-        # Inputs: x,y,z coordinates of cube in question
-        #
-        # Outputs: Updated (if boundary) delta velocity vector
-        
-        #lower boundary is fixed, velocity is Zero
-        if y == 0:
-            Dv[1]=0
-            if x <= 10 or x >= self.MaxX-10:
-                Dv[0] = 0
-                Dv[2] = 0
-
-        if x == 0 or y == 0 or z == 0 or x == self.MaxX+1 or y == self.MaxY+1 or z == self.MaxZ+1:
-            Dv[:]=0
-
-        return Dv
+    
     
     def DeltaStress(self,x,y,z):
         #Gets the change in the stresses per time at a certain coordinate juncture 
@@ -99,11 +51,7 @@ class EFIT:
         Lame1=self.Gp[1,x,y,z]
         Lame2=self.Gp[2,x,y,z]
 
-        #experimental add for grid offsetting
-        # x+=1
-        # y+=1
-        # z+=1
-        #end experiment
+
 
         BCs = 0
         if x == self.MaxX: BCs+=1
@@ -458,11 +406,11 @@ class EFIT:
         return self
     
     def StepStresses(self,xx=1,yy=1,zz=1):
-        for i in range(self.MaxX-1):
+        for i in range(self.MaxX-2):
             x = i + xx
-            for j in range(self.MaxY-1):
+            for j in range(self.MaxY-2):
                 y = j + yy
-                for k in range(self.MaxZ-1):
+                for k in range(self.MaxZ-2):
                     z = k + zz
                     self.UpdateStresses(x,y,z)
         self.Gs[0,0,0,:,:] = -self.Gs[0,0,1,:,:]
@@ -471,18 +419,18 @@ class EFIT:
         self.Gs[0,0,self.MaxX,:,:] = -self.Gs[0,0,self.MaxX-1,:,:]
         self.Gs[1,1,:,self.MaxY,:] = -self.Gs[1,1,:,self.MaxY-1,:]
         self.Gs[2,2,:,:,self.MaxZ] = -self.Gs[2,2,:,:,self.MaxZ-1]
-        self.Gs[0,1,self.MaxX-1,:,:]=0
-        self.Gs[0,2,self.MaxX-1,:,:]=0
-        self.Gs[1,0,self.MaxX-1,:,:]=0
-        self.Gs[1,2,self.MaxX-1,:,:]=0
-        self.Gs[1,0,:,self.MaxY-1,:]=0
-        self.Gs[1,2,:,self.MaxY-1,:]=0
-        self.Gs[0,1,:,self.MaxY-1,:]=0
-        self.Gs[2,1,:,self.MaxY-1,:]=0
-        self.Gs[2,0,:,:,self.MaxZ-1]=0
-        self.Gs[2,1,:,:,self.MaxZ-1]=0
-        self.Gs[0,2,:,:,self.MaxZ-1]=0
-        self.Gs[1,2,:,:,self.MaxZ-1]=0
+        self.Gs[0,1,self.MaxX,:,:]=0
+        self.Gs[0,2,self.MaxX,:,:]=0
+        self.Gs[1,0,self.MaxX,:,:]=0
+        self.Gs[1,2,self.MaxX,:,:]=0
+        self.Gs[1,0,:,self.MaxY,:]=0
+        self.Gs[1,2,:,self.MaxY,:]=0
+        self.Gs[0,1,:,self.MaxY,:]=0
+        self.Gs[2,1,:,self.MaxY,:]=0
+        self.Gs[2,0,:,:,self.MaxZ]=0
+        self.Gs[2,1,:,:,self.MaxZ]=0
+        self.Gs[0,2,:,:,self.MaxZ]=0
+        self.Gs[1,2,:,:,self.MaxZ]=0
         self.Gs[0,1,0,:,:]=0
         self.Gs[0,2,0,:,:]=0
         self.Gs[1,0,0,:,:]=0
@@ -497,14 +445,14 @@ class EFIT:
         self.Gs[1,2,:,:,0]=0
 
     def StepVelocities(self,xx=1,yy=1,zz=1):
-        for i in range(self.MaxX-1):
+        for i in range(self.MaxX-2):
             x = i + xx
-            for k in range(self.MaxY-1):
+            for k in range(self.MaxY-2):
                 y = k + yy
-                for j in range(self.MaxZ-1):
+                for j in range(self.MaxZ-2):
                     z = j + zz
                     self.UpdateVelocity(x,y,z)
-        self.Gv[:,:,:,0]=0
+        
 
     def ForcingFunctionWave(self, t, Hz = 40000, EP=100.0, size=0.04, Odim = 2, Dir=1):
         # Adds stresses from a force to the stress grid
@@ -536,47 +484,47 @@ class EFIT:
 
         Temp = np.zeros((EmitterWidth,EmitterWidth))
 
-        Temp[:,:] = np.sin(t/frequency*2*3.1415926) * EmitterPreasure
+        Temp[:,:] = np.cos(t/frequency*2*3.1415926) * EmitterPreasure
 
         if Odim == 0:
             Start0 = int((self.MaxY / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
             Start2 = int((self.MaxX / 2) - (1))
             if Dir ==1:
-                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[0,self.MaxX-2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,self.MaxX-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] += Temp
+                self.Gv[0,self.MaxX-2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] += Temp
             elif Dir ==2:
-                self.Gv[0,Start2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[0,Start2-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,Start2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] += Temp
+                self.Gv[0,Start2-1,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] += Temp
             else:
-                self.Gv[0,2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[0,3,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[0,2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] += Temp
+                self.Gv[0,3,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth] += Temp
         elif Odim == 1:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxZ / 2) - (EmitterWidth / 2))
             Start2 = int((self.MaxY / 2) - (1))
             if Dir ==1:
-                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[1,Start0:Start1+EmitterWidth,self.Maxy-2,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[1,Start0:Start1+EmitterWidth,self.MaxY-1,Start0:Start1+EmitterWidth] += Temp
+                self.Gv[1,Start0:Start1+EmitterWidth,self.Maxy-2,Start0:Start1+EmitterWidth] += Temp
             elif Dir == 2:
-                self.Gv[1,Start0:Start1+EmitterWidth,Start2,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[1,Start0:Start1+EmitterWidth,Start2-1,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[1,Start0:Start1+EmitterWidth,Start2,Start0:Start1+EmitterWidth] += Temp
+                self.Gv[1,Start0:Start1+EmitterWidth,Start2-1,Start0:Start1+EmitterWidth] += Temp
             else:
-                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,2,Start0:Start1+EmitterWidth] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,1,Start0:Start1+EmitterWidth] += Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,2,Start0:Start1+EmitterWidth] += Temp
         else:
             Start0 = int((self.MaxX / 2) - (EmitterWidth / 2))
             Start1 = int((self.MaxY / 2) - (EmitterWidth / 2))
             Start2 = int((self.MaxZ / 2) - (1))
             if Dir ==1:
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-2] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-1] += Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,self.MaxZ-2] += Temp
             elif Dir ==2:
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2-1] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2] += Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,Start2-1] += Temp
             else:
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] = Temp
-                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,2] = Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,1] += Temp
+                self.Gv[2,Start0:Start1+EmitterWidth,Start0:Start1+EmitterWidth,2] += Temp
         return self
 
     
