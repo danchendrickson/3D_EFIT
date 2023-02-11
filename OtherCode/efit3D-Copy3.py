@@ -142,6 +142,9 @@ ax=plt.axes(projection='3d')
 
 fig=ax.scatter3D(X,Y,Z,c=U, alpha=0.02, marker='.', cmap='cool')
 
+plt.savefig('GridShape.png')
+
+
 # %%
 #define sine-exponential wave excitation
 
@@ -162,8 +165,11 @@ sinConst=ts*amp/rho1
 
 sinInputSignal=sinConst*np.sin(2*np.pi*frequency*timeVec)*np.exp(-decayRate*timeVec)
 
-plt.plot(timeVec,sinInputSignal)
+fig = plt.figure()
 
+plt.plot(timeVec,sinInputSignal)
+plt.savefig('Signal.png')
+plt.show()
 plt.ioff()
 
 # %%
