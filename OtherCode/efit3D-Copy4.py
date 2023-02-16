@@ -64,7 +64,7 @@ height1 = 0.10
 
 # %%
 #Run for 6 Cycles:
-runtime = 5 / frequency 
+runtime = 20 / frequency 
 
 #Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
 #ts = 1 / frequency / 10    #time step
@@ -1002,7 +1002,7 @@ for t in range(0,Tsteps):
         plt.close(fig)
     
     
-    print(t,'/',Tsteps-1,'checksums vx, sxx:',np.sum(np.absolute(vx)),np.sum(np.absolute(sxx)), time.time()-stime)
+    print(t,'/',Tsteps-1,'checksums vx, sxx:',np.sum(np.absolute(vx)),np.sum(np.absolute(sxx)), time.time()-stime, flush=True)
 
 # %%
 plt.plot(vx1Signal)
@@ -1035,7 +1035,7 @@ def make_gif(frame_folder):
     
 
 # %%
-frame_folder='/sciclone/home20/dchendrickson01/images'
+frame_folder='/sciclone/home20/dchendrickson01/images2'
 
 frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.png")]
 
