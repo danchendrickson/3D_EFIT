@@ -1,13 +1,11 @@
 # %%
 import numpy as np
+import matplotlib
+#matplotlib.use('nbagg')
 import matplotlib.pyplot as plt
 import scipy as sp
 import math
 import time
-import matplotlib
-#from joblib.pool import has_shareable_memory
-
-# %%
 # set Constants
 
 #MATERIAL 1 ((steel))
@@ -26,7 +24,7 @@ ct1 = np.sqrt(mu1/rho1)
 print('material 1 wave speeds:' ,cl1,ct1)
 
 #Choose ferquency to be used for excitment
-frequency = 40000
+frequency = 120000
 
 #calculate wave lengths for material 1
 omegaL1 = cl1 / frequency
@@ -60,9 +58,9 @@ width1 = 0.1524
 height1 = 0.1524
 
 
-# %%
+
 #Run for 6 Cycles:
-runtime = 5 / frequency 
+runtime = 20.0 / frequency 
 
 #Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
 #ts = 1 / frequency / 10    #time step
@@ -83,7 +81,6 @@ print('runtime (s), time step size (s), total # of time steps:', runtime, ts, Ts
 print('grid step size, # of length pts, # of height pts, # of width pts:', gs, gl1, gw1,gh1)
 
 
-# %%
 #tensor to store material properties for each point
 #0 index is density
 #1 index is first Lame Parmaeter
@@ -94,71 +91,63 @@ matProps[0,:,:,:]=rho1
 matProps[1,:,:,:]=lmbda1
 matProps[2,:,:,:]=mu1
 
-# %%
-matProps[0,:,1,8]=rho2
+AirCut = True
+if AirCut:
+    #zone 1 of air, left of web
+    for yy in range(int(13/36*gw1)-1):
+        y = yy + 0
+        for zz in range(int(16/36*gw1)):
+            z = zz + int(8/36*gw1)-1
+            matProps[0,:,y,z]=rho2
+            matProps[1,:,y,z]=lmbda2
+            matProps[2,:,y,z]=mu2
 
+    # zone 2 of air left of head
+    for yy in range(int(4/36*gw1)-1):
+        y = yy + 0
+        for zz in range(int(12/36*gw1)-1):
+            z = zz + int(24/36*gw1)-1
+            matProps[0,:,y,z]=rho2
+            matProps[1,:,y,z]=lmbda2
+            matProps[2,:,y,z]=mu2
 
-# %%
-#zone 1 of air, left of web
-for yy in range(13):
-    for zz in range(16):
-        y = yy
-        z = zz + 8
-        matProps[0,:,y,z]=rho2
-        matProps[1,:,y,z]=lmbda2
-        matProps[2,:,y,z]=mu2
-# %%
-# zone 2 of air left of head
-for yy in range(4):
-    for zz in range(12):
-        y = yy
-        z = zz + 24
-        matProps[0,:,y,z]=rho2
-        matProps[1,:,y,z]=lmbda2
-        matProps[2,:,y,z]=mu2
-# %%
-# zone 3 of air, right of web
-for yy in range(13):
-    for zz in range(16):
-        y = yy + 23
-        z = zz + 8
-        matProps[0,:,y,z]=rho2
-        matProps[1,:,y,z]=lmbda2
-        matProps[2,:,y,z]=mu2
-# %%
-# zone 4 of air, right of head
-for yy in range(4):
-    for zz in range(12):
-        y = yy + 32
-        z = zz + 24
-        matProps[0,:,y,z]=rho2
-        matProps[1,:,y,z]=lmbda2
-        matProps[2,:,y,z]=mu2
-# %%
-#3D scatter plot of grid pts to show geometry 
-#of the 2 materials
+    # zone 3 of air, right of web
+    for yy in range(int(13/36*gw1)):
+        y = yy + int(13/36*gw1)+1
+        for zz in range(int(16/36*gw1)):
+            z = zz + int(8/36*gw1)+1
+            matProps[0,:,y,z]=rho2
+            matProps[1,:,y,z]=lmbda2
+            matProps[2,:,y,z]=mu2
 
-x=np.linspace(0,gl1,gl1)
-y=np.linspace(0,gw1,gw1)
-z=np.linspace(0,gh1,gh1)
+    # zone 4 of air, right of head
+    for yy in range(int(4/36*gw1)-1):
+        y = yy + int(23/36*gw1)+1
+        for zz in range(int(12/36*gw1)):
+            z = zz + int(24/36*gw1)+1
+            matProps[0,:,y,z]=rho2
+            matProps[1,:,y,z]=lmbda2
+            matProps[2,:,y,z]=mu2
 
-X, Y, Z = np.meshgrid(x, y, z)
+DoThis = False
+if DoThis:
+    import plotly.graph_objects as go
 
-U=matProps[0,:,:,:]
+    X, Y, Z = np.mgrid[0:gl1, 0:gw1, 0:gh1]
+    values = matProps[0,:,:,:]
 
-plt.figure()
+    fig = go.Figure(data=go.Volume(
+        x=X.flatten(),
+        y=Y.flatten(),
+        z=Z.flatten(),
+        value=values.flatten(),
+        isomin=np.min(matProps[0,:,:,:]),
+        isomax=np.max(matProps[0,:,:,:]),
+        opacity=0.1, # needs to be small to see through all surfaces
+        surface_count=21, # needs to be a large number for good volume rendering
+        ))
+    fig.show()
 
-
-ax=plt.axes(projection='3d')
-
-
-matplotlib.use('nbagg')
-fig=ax.scatter3D(X,Y,Z,c=U, alpha=0.02, marker='.', cmap='cool')
-
-plt.show()
-#plt.savefig('GridShape.png')
-
-# %%
 #define sine-exponential wave excitation
 
 timeVec=np.linspace(0,runtime,Tsteps)
@@ -173,7 +162,7 @@ inputz=int(gh1/2)
 szzConst=2*ts/(gs*rho1)
 
 amp=10000
-decayRate= 50000
+decayRate= 500000
 sinConst=ts*amp/rho1
 
 sinInputSignal=sinConst*np.sin(2*np.pi*frequency*timeVec)*np.exp(-decayRate*timeVec)
@@ -183,7 +172,6 @@ plt.savefig('Signal.png')
 plt.show()
 plt.ioff()
 
-# %%
 #boundary values 
 xmax=gl1-1
 ymax=gw1-1
@@ -217,8 +205,19 @@ vx2Signal=np.zeros(Tsteps)
 vy2Signal=np.zeros(Tsteps)
 vz2Signal=np.zeros(Tsteps)
 
+TopSig00=np.zeros(Tsteps)
+TopSig10=np.zeros(Tsteps)
+TopSig20=np.zeros(Tsteps)
+TopSig30=np.zeros(Tsteps)
+TopSig40=np.zeros(Tsteps)
+TopSig50=np.zeros(Tsteps)
+TopSig60=np.zeros(Tsteps)
+TopSig70=np.zeros(Tsteps)
+TopSig80=np.zeros(Tsteps)
+TopSig90=np.zeros(Tsteps)
+TopSig99=np.zeros(Tsteps)
 
-# %%
+
 def updateStresses(x,y,z):
     
     #Calculate constants for stress equations
@@ -255,8 +254,6 @@ def updateStresses(x,y,z):
     #delete variables for updates
     del norm1, norm2
 
-
-# %%
 def updateStressBoundary(x,y,z):
         
     #Calculate constants for stress equations
@@ -652,8 +649,6 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=0
 
     else: print('error:', str(x), str(y), str(z))
-
-# %%
 def updateVelocity(x,y,z):
     #calculate constants for velocity
     
@@ -671,8 +666,6 @@ def updateVelocity(x,y,z):
     vz[x,y,z]=vz[x,y,z]+dv*ts
 
     del dvxConst, dvyConst, dvzConst
-
-
 # %%
 def updateVelocityBoundary(x,y,z):
     if x!=xmax:
@@ -925,11 +918,87 @@ def updateVelocityBoundary(x,y,z):
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
     else: print('error: ',x,y,z)
+   
 
+#Set Boundary Conditions for edges off the rail
+#
+def setBCsForRail():
+    # zone 1 of air left of web
+    for yy in range(int(13/36*gw1)):
+        y = yy + 0
+        for zz in range(int(16/36*gh1)):
+            z = zz + int(8/36*gh1)
+            BCs[:,y,z]=99
 
+    # zone 2 of air left of head
+    for yy in range(int(4/36*gw1)):
+        y = yy + 0
+        for zz in range(int(12/36*gh1)):
+            z = zz + int(24/36*gh1)
+            BCs[:,y,z]=99
 
+    # zone 3 of air, right of web
+    for yy in range(int(13/36*gw1)):
+        y = yy + int(24/36*gw1)
+        for zz in range(int(16/36*gh1)):
+            z = zz + int(8/36*gh1)
+            BCs[:,y,z]=99
 
-# %%
+    # zone 4 of air, right of head
+    for yy in range(int(4/36*gw1)):
+        y = yy + int(32/36*gw1)
+        for zz in range(int(12/36*gh1)):
+            z = zz + int(24/36*gh1)
+            BCs[:,y,z]=99
+
+    #top of footing
+    z = int(7/36*gh1)
+    for yy in range(int(13/36*gw1)):
+        y = yy + 0
+        BCs[:,y,z]=2
+    for yy in range(int(13/36*gw1)):
+        y = yy + int(23/36*gw1)
+        BCs[:,y,z]=2
+    #sides of web
+    y=int(13/36*gw1)
+    for zz in range(int(16/36*gh1)):
+        z = zz + int(8/36*gh1)
+        BCs[:,y,z]=3
+    y=int(23/36*gw1)
+    for zz in range(int(16/36*gh1)):
+        z = zz + int(8/36*gh1)
+        BCs[:,y,z]=4
+    #bottom of head
+    z=int(12/36*gh1)
+    for yy in range(int(9/36*gw1)):
+        y=yy+int(5/36*gw1)
+        BCs[:,y,z]=1
+    for yy in range(int(9/36*gw1)):
+        y=yy+int(23/36*gw1)
+        BCs[:,y,z]=1
+    #sides of head
+    y=int(5/36*gw1)
+    for zz in range(int(12/36*gh1)):
+        z = zz + int(23/36*gh1)
+        BCs[:,y,z]=3
+    y=int(31/36*gw1)
+    for zz in range(int(12/36*gh1)):
+        z = zz + int(23/36*gh1)
+        BCs[:,y,z]=4
+    #top edge of foot on left
+    BCs[:,0,int(8/36*gh1)]=13
+    #top endge of foot on right
+    BCs[:,gw1,int(8/36*gh1)]=14
+    #bottom of head on left
+    BCs[:,int(5/36*gw1),int(12/36*gh1)]=9
+    #bottom of head on right
+    BCs[:,int(30/36*gw1),int(12/36*gh1)]=10
+    #Top of head on left
+    BCs[:,int(5/36*gw1),gh1]=13
+    #top of head on right
+    BCs[:,int(30/36*gw1),gh1]=14
+
+    
 def setBCsCube(x,y,z):
  
     #corners
@@ -975,9 +1044,9 @@ def setBCs(mode = 1):
         for y in range(gw1):
             for z in range(gh1):
                 if mode == 1: setBCsCube(x,y,z)
+    if mode==2:
+        setBCsForRail()
                 
-
-
 # %%
 Points = []
 BoundaryPoints=[]
@@ -994,30 +1063,43 @@ for x in range(gl1-1):
 # %%
 print(np.shape(Points)[0] + np.shape(BoundaryPoints)[0], gl1, gw1, gh1, (gl1-1)*(gw1-1)*(gh1-1))
 
-
 # %%
 stime = time.time()
 jobs = 15
+
+
+WriteFile = open('/sciclone/scr10/dchendrickson01/3DImg/.Status.txt','a')
+
 
 for t in range(0,Tsteps):
     
        
     #sin-exponential input
-    vz[inputx,inputy,inputz]=vz[inputx,inputy,inputz]-szzConst*szz[inputx,inputy,inputz]+sinInputSignal[t]
+    #vz[inputx,inputy,inputz]=vz[inputx,inputy,inputz]-szzConst*szz[inputx,inputy,inputz]+sinInputSignal[t]
     
     #update Stresses
     #Parallel(n_jobs=jobs,prefer="threads")(delayed(updateStresses)(i[0],i[1],i[2]) for i in Points)
-    for i in Points: updateStresses(i[0],i[1],i[2])
-    for i in BoundaryPoints: updateStressBoundary(i[0],i[1],i[2])
+    #for i in Points: updateStresses(i[0],i[1],i[2])
+    #for i in BoundaryPoints: updateStressBoundary(i[0],i[1],i[2])
     #removed: , require='sharedmem', verbose = 0,prefer="threads")
 
-
+    if t < 50:
+        dszz = np.ones((int(24/36*gw1)+1,int(24/36*gw1)+1))
+        dszz *= -np.sin(np.linspace(0,np.pi,int(24/36*gw1)+1))
+        dszz = dszz.T
+        dszz *= 795
+        szz[t:int(24/36*gw1)+1+t,int(6/36*gw1):int(30/36*gw1),zmax-1:zmax] -= dszz
+    
+    
     #update Velocities
     #Parallel(n_jobs=jobs,prefer="threads")(delayed(updateVelocity)(i[0],i[1],i[2]) for i in Points)
     for i in Points: updateVelocity(i[0],i[1],i[2])
     for i in BoundaryPoints: updateVelocityBoundary(i[0],i[1],i[2])
     #removed: , require='sharedmem', verbose = 0,prefer="threads")
     
+    #update Stresses
+    for i in Points: updateStresses(i[0],i[1],i[2])
+    for i in BoundaryPoints: updateStressBoundary(i[0],i[1],i[2])
         
     #record signals
     vx1Signal[t]=vx[int(signalLocx/2),signalLocy,signalLocz]
@@ -1028,29 +1110,46 @@ for t in range(0,Tsteps):
     vy2Signal[t]=vy[int(3*signalLocx/2),signalLocy,signalLocz]
     vz2Signal[t]=vz[int(3*signalLocx/2),signalLocy,signalLocz]
     
+    TopSig00 = vz[0,int(gw/2),zmax-1]
+    TopSig10 = vz[int(gl*.1),int(gw/2),zmax-1]
+    TopSig20 = vz[int(gl*.2),int(gw/2),zmax-1]
+    TopSig30 = vz[int(gl*.3),int(gw/2),zmax-1]
+    TopSig40 = vz[int(gl*.4),int(gw/2),zmax-1]
+    TopSig50 = vz[int(gl*.5),int(gw/2),zmax-1]
+    TopSig60 = vz[int(gl*.6),int(gw/2),zmax-1]
+    TopSig70 = vz[int(gl*.7),int(gw/2),zmax-1]
+    TopSig80 = vz[int(gl*.8),int(gw/2),zmax-1]
+    TopSig90 = vz[int(gl*.9)int(gw/2),zmax-1]
+    TopSig99 = vz[xmax,int(gw/2),zmax-1]
+    
+    
     #save vx cut figure
     if t%10==0:
         fig=plt.figure()
-        plt.contourf(np.transpose(vz[:,:,int(gh1/2)]), cmap='seismic')
-        plt.savefig('images2/vzmidCut'+str(t).zfill(5)+'.png')
+        plt.contourf(np.transpose(vz[:,int(gw1/2),:]), cmap='seismic')
+        plt.savefig('/sciclone/scr10/dchendrickson01/3DImg/MiddleCut/vzmidCut'+str(t).zfill(5)+'.png')
+        plt.close(fig)
+        fig=plt.figure()
+        rVel = np.sqrt(np.transpose(vx[:,:,zmax-1]) **2 + np.transpose(vy[:,:,zmax-1]) **2 + np.transpose(vz[:,:,zmax-1])**2)
+        plt.contourf(rVel, cmap='seismic')
+        plt.savefig('/sciclone/scr10/dchendrickson01/3DImg/TopSurface/TopSurface'+str(t).zfill(5)+'.png')
         plt.close(fig)
     
     
-    print(t,'/',Tsteps-1,'checksums vx, sxx:',np.sum(np.absolute(vx)),np.sum(np.absolute(sxx)), time.time()-stime)
+    WriteFile.write(str(t)+'/'+str(Tsteps-1)+'checksums vx, sxx:'+str(np.sum(np.absolute(vx)))+', '+str(np.sum(np.absolute(sxx)))+', time: '+str( time.time()-stime))
 
 # %%
-plt.plot(vx1Signal)
-plt.plot(vx2Signal)
-plt.show()
-
-# %%
-plt.plot(vy1Signal)
-plt.plot(vy2Signal)
-plt.show()
-
-# %%
-plt.plot(vz1Signal)
-plt.plot(vz2Signal)
+plt.plot(TopSig00,label='00%')
+plt.plot(TopSig10,label='10%')
+plt.plot(TopSig20,label='20%')
+plt.plot(TopSig30,label='30%')
+plt.plot(TopSig40,label='40%')
+plt.plot(TopSig50,label='50%')
+plt.plot(TopSig60,label='60%')
+plt.plot(TopSig70,label='70%')
+plt.plot(TopSig80,label='80%')
+plt.plot(TopSig90,label='90%')
+plt.savefig('/sciclone/scr10/dchendrickson01/3DImg/VerticalsBy10.png')
 plt.show()
 
 # %%
@@ -1061,21 +1160,14 @@ import glob
 from PIL import Image
 
 
-def make_gif(frame_folder):
-    frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.PNG")]
+def make_gif(frame_folder, imageName = 'efit.gif'):
+    frames = [Image.open(image) for image in sorted(glob.glob(f"{frame_folder}/*.png"))]
     frame_one = frames[0]
-    frame_one.save(f"{frame_folder}/efitAnim.gif", format="GIF", append_images=frames,
+    frame_one.save(f"{frame_folder}/{imageName}", format="GIF", append_images=frames,
                save_all=True, duration=300, loop=0)
-    
 
 # %%
-frame_folder='/sciclone/home20/dchendrickson01/images'
-
-frames = [Image.open(image) for image in glob.glob(f"{frame_folder}/*.png")]
-
-# %%
-frame_one = frames[0]
-frame_one.save(f"{frame_folder}/long run efitAnim.gif", format="GIF", append_images=frames,
-           save_all=True, duration=300, loop=0)
-
-
+frame_folder='/sciclone/scr10/dchendrickson01/3DImg/MiddleCut'
+make_gif(frame_folder, 'VerticalCut.gif')
+frame_folder='/sciclone/scr10/dchendrickson01/3DImg/TopSurface'
+make_gif(frame_folder, 'TopSurface.gif')
