@@ -1088,7 +1088,7 @@ for t in range(0,Tsteps):
         dszz *= -np.sin(np.linspace(0,np.pi,int(24/36*gw1)+1))
         dszz = dszz.T
         dszz *= 795
-        szz[t:int(24/36*gw1)+1+t,int(6/36*gw1):int(30/36*gw1),zmax-1:zmax] -= dszz
+        szz[t:int(24/36*gw1)+1+t,int(6/36*gw1):int(30/36*gw1),zmax-1] -= dszz
     
     
     #update Velocities
@@ -1110,17 +1110,17 @@ for t in range(0,Tsteps):
     vy2Signal[t]=vy[int(3*signalLocx/2),signalLocy,signalLocz]
     vz2Signal[t]=vz[int(3*signalLocx/2),signalLocy,signalLocz]
     
-    TopSig00 = vz[0,int(gw/2),zmax-1]
-    TopSig10 = vz[int(gl*.1),int(gw/2),zmax-1]
-    TopSig20 = vz[int(gl*.2),int(gw/2),zmax-1]
-    TopSig30 = vz[int(gl*.3),int(gw/2),zmax-1]
-    TopSig40 = vz[int(gl*.4),int(gw/2),zmax-1]
-    TopSig50 = vz[int(gl*.5),int(gw/2),zmax-1]
-    TopSig60 = vz[int(gl*.6),int(gw/2),zmax-1]
-    TopSig70 = vz[int(gl*.7),int(gw/2),zmax-1]
-    TopSig80 = vz[int(gl*.8),int(gw/2),zmax-1]
-    TopSig90 = vz[int(gl*.9)int(gw/2),zmax-1]
-    TopSig99 = vz[xmax,int(gw/2),zmax-1]
+    TopSig00 = vz[0,int(gw1/2),zmax-1]
+    TopSig10 = vz[int(gl1*.1),int(gw1/2),zmax-1]
+    TopSig20 = vz[int(gl1*.2),int(gw1/2),zmax-1]
+    TopSig30 = vz[int(gl1*.3),int(gw1/2),zmax-1]
+    TopSig40 = vz[int(gl1*.4),int(gw1/2),zmax-1]
+    TopSig50 = vz[int(gl1*.5),int(gw1/2),zmax-1]
+    TopSig60 = vz[int(gl1*.6),int(gw1/2),zmax-1]
+    TopSig70 = vz[int(gl1*.7),int(gw1/2),zmax-1]
+    TopSig80 = vz[int(gl1*.8),int(gw1/2),zmax-1]
+    TopSig90 = vz[int(gl1*.9),int(gw1/2),zmax-1]
+    TopSig99 = vz[xmax,int(gw1/2),zmax-1]
     
     
     #save vx cut figure
