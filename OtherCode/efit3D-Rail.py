@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import scipy as sp
 import math
 import time
+
+
 # set Constants
 
 #MATERIAL 1 ((steel))
@@ -60,7 +62,7 @@ height1 = 0.1524
 
 
 #Run for 6 Cycles:
-runtime = 20.0 / frequency 
+runtime = 20 / frequency 
 
 #Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
 #ts = 1 / frequency / 10    #time step
@@ -81,6 +83,10 @@ print('runtime (s), time step size (s), total # of time steps:', runtime, ts, Ts
 print('grid step size, # of length pts, # of height pts, # of width pts:', gs, gl1, gw1,gh1)
 
 
+
+# In[4]:
+
+
 #tensor to store material properties for each point
 #0 index is density
 #1 index is first Lame Parmaeter
@@ -90,6 +96,10 @@ matProps=np.zeros((3,gl1,gw1,gh1))
 matProps[0,:,:,:]=rho1
 matProps[1,:,:,:]=lmbda1
 matProps[2,:,:,:]=mu1
+
+
+# In[5]:
+
 
 AirCut = True
 if AirCut:
@@ -129,6 +139,10 @@ if AirCut:
             matProps[1,:,y,z]=lmbda2
             matProps[2,:,y,z]=mu2
 
+
+# In[6]:
+
+
 DoThis = False
 if DoThis:
     import plotly.graph_objects as go
@@ -147,6 +161,10 @@ if DoThis:
         surface_count=21, # needs to be a large number for good volume rendering
         ))
     fig.show()
+
+
+# In[7]:
+
 
 #define sine-exponential wave excitation
 
@@ -168,9 +186,13 @@ sinConst=ts*amp/rho1
 sinInputSignal=sinConst*np.sin(2*np.pi*frequency*timeVec)*np.exp(-decayRate*timeVec)
 
 plt.plot(timeVec,sinInputSignal)
-plt.savefig('Signal.png')
+#plt.savefig('Signal.png')
 plt.show()
 plt.ioff()
+
+
+# In[8]:
+
 
 #boundary values 
 xmax=gl1-1
@@ -190,7 +212,7 @@ sxz=np.zeros((gl1,gw1,gh1))
 syz=np.zeros((gl1,gw1,gh1))
 
 #initialize Boundary Conditions
-BCs=np.zeros((gl1,gw1,gh1))
+BCs=np.zeros((gl1,gw1,gh1),dtype='int')
 
 #record the signal at a specified location
 signalLocx=int(gl1/2)
@@ -205,17 +227,8 @@ vx2Signal=np.zeros(Tsteps)
 vy2Signal=np.zeros(Tsteps)
 vz2Signal=np.zeros(Tsteps)
 
-TopSig00=np.zeros(Tsteps)
-TopSig10=np.zeros(Tsteps)
-TopSig20=np.zeros(Tsteps)
-TopSig30=np.zeros(Tsteps)
-TopSig40=np.zeros(Tsteps)
-TopSig50=np.zeros(Tsteps)
-TopSig60=np.zeros(Tsteps)
-TopSig70=np.zeros(Tsteps)
-TopSig80=np.zeros(Tsteps)
-TopSig90=np.zeros(Tsteps)
-TopSig99=np.zeros(Tsteps)
+
+# In[9]:
 
 
 def updateStresses(x,y,z):
@@ -254,6 +267,10 @@ def updateStresses(x,y,z):
     #delete variables for updates
     del norm1, norm2
 
+
+# In[22]:
+
+
 def updateStressBoundary(x,y,z):
         
     #Calculate constants for stress equations
@@ -261,22 +278,26 @@ def updateStressBoundary(x,y,z):
     norm2=(1/gs)*(matProps[1,x,y,z])
 
 
-    if x!=0 and x!=xmax and y!=0 and y!=ymax:
+    try:
         shearDenomxy=(1/matProps[2,x,y,z])+(1/matProps[2,x+1,y,z])+(1/matProps[2,x,y+1,z])+(1/matProps[2,x+1,y+1,z])
         shearxy=4*(1/gs)*(1/shearDenomxy)
-
-    if x!=0 and x!=xmax and z!=0 and z!=zmax:
-
+    except:
+        pass
+    
+    try:
         shearDenomxz=(1/matProps[2,x,y,z])+(1/matProps[2,x+1,y,z])+(1/matProps[2,x,y,z+1])+(1/matProps[2,x+1,y,z+1])
         shearxz=4*(1/gs)*(1/shearDenomxz)
-
-    if y!=0 and y!=ymax and z!=0 and z!=zmax:
-
+    except:
+        pass
+    
+    try:
         shearDenomyz=(1/matProps[2,x,y,z])+(1/matProps[2,x,y+1,z])+(1/matProps[2,x,y,z+1])+(1/matProps[2,x,y+1,z+1])
         shearyz=4*(1/gs)*(1/shearDenomyz)
-
+    except:
+        pass
+    
     #FACES
-    if BCs[x,y,x] == 1:
+    if BCs[x,y,z] == 1:
 
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
@@ -293,7 +314,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 5:
+    elif BCs[x,y,z] == 5:
 
 
         sxx[x,y,x]=-sxx[x+1,y,z]
@@ -311,7 +332,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=syz[x,y,z]+ds*ts
         del shearyz
 
-    elif BCs[x,y,x] == 6:
+    elif BCs[x,y,z] == 6:
         sxx[x,y,z]=-sxx[x-1,y,z]
 
         ds=norm1*(vy[x,y,z]-vy[x,y-1,z])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vz[x,y,z]-vz[x,y,z-1])
@@ -327,7 +348,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=syz[x,y,z]+ds*ts
         del shearyz
 
-    elif BCs[x,y,x] == 3:
+    elif BCs[x,y,z] == 3:
 
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
@@ -345,7 +366,7 @@ def updateStressBoundary(x,y,z):
 
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 4:
+    elif BCs[x,y,z] == 4:
 
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
@@ -363,7 +384,7 @@ def updateStressBoundary(x,y,z):
 
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 2:
+    elif BCs[x,y,z] == 2:
 
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
@@ -383,7 +404,7 @@ def updateStressBoundary(x,y,z):
 
     #EDGES
     #bottom edges
-    elif BCs[x,y,x] == 7:
+    elif BCs[x,y,z] == 7:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -396,7 +417,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 8:
+    elif BCs[x,y,z] == 8:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -410,7 +431,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=0
 
 
-    elif BCs[x,y,x] == 9:
+    elif BCs[x,y,z] == 9:
 
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
@@ -424,7 +445,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=0
 
 
-    elif BCs[x,y,x] == 10:
+    elif BCs[x,y,z] == 10:
 
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
@@ -438,7 +459,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=0
 
     #side edges
-    elif BCs[x,y,x] == 15:
+    elif BCs[x,y,z] == 15:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -452,7 +473,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=0
 
 
-    elif BCs[x,y,x] == 17:
+    elif BCs[x,y,z] == 17:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -465,7 +486,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 16:
+    elif BCs[x,y,z] == 16:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -479,7 +500,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=0
 
 
-    elif BCs[x,y,x] == 18:
+    elif BCs[x,y,z] == 18:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -494,7 +515,7 @@ def updateStressBoundary(x,y,z):
 
 
     #top edges
-    elif BCs[x,y,x] == 11:
+    elif BCs[x,y,z] == 11:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -507,7 +528,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 12:
+    elif BCs[x,y,z] == 12:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -520,9 +541,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 13:
-
-
+    elif BCs[x,y,z] == 13:
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
 
@@ -535,9 +554,7 @@ def updateStressBoundary(x,y,z):
         syz[x,y,z]=0
 
 
-    elif BCs[x,y,x] == 14:
-
-
+    elif BCs[x,y,z] == 14:
         ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
         sxx[x,y,z]=sxx[x,y,z]+ds*ts
 
@@ -552,7 +569,7 @@ def updateStressBoundary(x,y,z):
 
     #CORNERS
 
-    elif BCs[x,y,x] == 19:
+    elif BCs[x,y,z] == 19:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -564,7 +581,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] ==  20:
+    elif BCs[x,y,z] ==  20:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -576,7 +593,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] ==  21:
+    elif BCs[x,y,z] ==  21:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -588,7 +605,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 22:
+    elif BCs[x,y,z] == 22:
 
         sxx[x,y,z]=-sxx[x+1,y,z]
 
@@ -600,7 +617,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 23:
+    elif BCs[x,y,z] == 23:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -612,7 +629,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 24:
+    elif BCs[x,y,z] == 24:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -624,7 +641,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] == 25:
+    elif BCs[x,y,z] == 25:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -636,7 +653,7 @@ def updateStressBoundary(x,y,z):
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
-    elif BCs[x,y,x] ==  26:
+    elif BCs[x,y,z] ==  26:
 
         sxx[x,y,z]=-sxx[x-1,y,z]
 
@@ -644,11 +661,27 @@ def updateStressBoundary(x,y,z):
 
         szz[x,y,z]=-szz[x,y,z-1]
 
+        sxy[x,y,z]=0
+        sxz[x,y,z]=0
+        syz[x,y,z]=0
+        
+    elif BCs[x,y,z] == 0:
+        updateStresses(x,y,z)
+        
+    elif BCs[x,y,z] == 99:
+        sxx[x,y,z]=0
+        syy[x,y,z]=0
+        szz[x,y,z]=0
         sxy[x,y,z]=0
         sxz[x,y,z]=0
         syz[x,y,z]=0
 
     else: print('error:', str(x), str(y), str(z))
+
+
+# In[11]:
+
+
 def updateVelocity(x,y,z):
     #calculate constants for velocity
     
@@ -666,6 +699,11 @@ def updateVelocity(x,y,z):
     vz[x,y,z]=vz[x,y,z]+dv*ts
 
     del dvxConst, dvyConst, dvzConst
+
+
+# In[12]:
+
+
 # %%
 def updateVelocityBoundary(x,y,z):
     if x!=xmax:
@@ -683,17 +721,16 @@ def updateVelocityBoundary(x,y,z):
     vmax=(2*ts)/(matProps[0,x,y,z]*gs)
 
     #FACES
-    if BCs[x,y,x] == 1:
+    if BCs[x,y,z] == 1:
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
-
+        
         dv=dvyConst*(sxy[x,y,z]-sxy[x-1,y,z]+syy[x,y+1,z]-syy[x,y,z]+syz[x,y,z]-syz[x,y,z-1])
         vy[x,y,z]=vy[x,y,z]+dv*ts
 
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-
-    elif BCs[x,y,x] == 5:
+    elif BCs[x,y,z] == 5:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
 
@@ -703,8 +740,7 @@ def updateVelocityBoundary(x,y,z):
         dv=dvzConst*(sxz[x,y,z]-sxz[x-1,y,z]+syz[x,y,z]-syz[x,y-1,z]+szz[x,y,z+1]-szz[x,y,z])
         vz[x,y,z]=vz[x,y,z]+dv*ts
 
-
-    elif BCs[x,y,x] == 6:
+    elif BCs[x,y,z] == 6:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
 
@@ -714,7 +750,7 @@ def updateVelocityBoundary(x,y,z):
         dv=dvzConst*(sxz[x,y,z]-sxz[x-1,y,z]+syz[x,y,z]-syz[x,y-1,z]+szz[x,y,z+1]-szz[x,y,z])
         vz[x,y,z]=vz[x,y,z]+dv*ts
 
-    elif BCs[x,y,x] == 3:
+    elif BCs[x,y,z] == 3:
 
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
@@ -725,8 +761,7 @@ def updateVelocityBoundary(x,y,z):
         vz[x,y,z]=vz[x,y,z]+dv*ts
 
 
-    elif BCs[x,y,x] == 4:
-
+    elif BCs[x,y,z] == 4:
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
 
@@ -736,22 +771,18 @@ def updateVelocityBoundary(x,y,z):
         vz[x,y,z]=vz[x,y,z]+dv*ts                     
 
 
-    elif BCs[x,y,x] == 2:
-
+    elif BCs[x,y,z] == 2:
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
-
 
         dv=dvyConst*(sxy[x,y,z]-sxy[x-1,y,z]+syy[x,y+1,z]-syy[x,y,z]+syz[x,y,z]-syz[x,y,z-1])
         vy[x,y,z]=vy[x,y,z]+dv*ts
 
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
-
-
     #EDGES
     #bottom edges
-    elif BCs[x,y,x] == 7:
+    elif BCs[x,y,z] == 7:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
 
@@ -760,7 +791,7 @@ def updateVelocityBoundary(x,y,z):
 
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-    elif BCs[x,y,x] == 8:
+    elif BCs[x,y,z] == 8:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
 
@@ -769,7 +800,7 @@ def updateVelocityBoundary(x,y,z):
 
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-    elif BCs[x,y,x] == 9:
+    elif BCs[x,y,z] == 9:
 
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
@@ -778,7 +809,7 @@ def updateVelocityBoundary(x,y,z):
 
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-    elif BCs[x,y,x] == 10:
+    elif BCs[x,y,z] == 10:
 
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
@@ -788,7 +819,7 @@ def updateVelocityBoundary(x,y,z):
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
     #side edges
-    elif BCs[x,y,x] == 15:
+    elif BCs[x,y,z] == 15:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
 
@@ -797,7 +828,7 @@ def updateVelocityBoundary(x,y,z):
         dv=dvzConst*(sxz[x,y,z]-sxz[x-1,y,z]+syz[x,y,z]-syz[x,y-1,z]+szz[x,y,z+1]-szz[x,y,z])
         vz[x,y,z]=vz[x,y,z]+dv*ts
 
-    elif BCs[x,y,x] == 17:
+    elif BCs[x,y,z] == 17:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
 
@@ -807,7 +838,7 @@ def updateVelocityBoundary(x,y,z):
         vz[x,y,z]=vz[x,y,z]+dv*ts
 
 
-    elif BCs[x,y,x] == 16:
+    elif BCs[x,y,z] == 16:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
 
@@ -818,7 +849,7 @@ def updateVelocityBoundary(x,y,z):
 
 
 
-    elif BCs[x,y,x] == 18:
+    elif BCs[x,y,z] == 18:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
 
@@ -829,7 +860,7 @@ def updateVelocityBoundary(x,y,z):
 
 
     #top edges
-    elif BCs[x,y,x] == 11:
+    elif BCs[x,y,z] == 11:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
 
@@ -839,7 +870,7 @@ def updateVelocityBoundary(x,y,z):
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
 
-    elif BCs[x,y,x] == 12:
+    elif BCs[x,y,z] == 12:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
 
@@ -848,7 +879,7 @@ def updateVelocityBoundary(x,y,z):
 
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
-    elif BCs[x,y,x] == 13:
+    elif BCs[x,y,z] == 13:
 
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
@@ -858,7 +889,7 @@ def updateVelocityBoundary(x,y,z):
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
 
-    elif BCs[x,y,x] == 14:
+    elif BCs[x,y,z] == 14:
 
         dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
         vx[x,y,z]=vx[x,y,z]+dv*ts
@@ -869,56 +900,68 @@ def updateVelocityBoundary(x,y,z):
 
 
     #CORNERS
-    elif BCs[x,y,x] == 19:
+    elif BCs[x,y,z] == 19:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
         vy[x,y,z]=vy[x,y,z]+vminy*syy[x,y+1,z]
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-    elif BCs[x,y,x] == 20:
+    elif BCs[x,y,z] == 20:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
         vy[x,y,z]=vy[x,y,z]+vminy*syy[x,y+1,z]
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
-    elif BCs[x,y,x] == 21:
+    elif BCs[x,y,z] == 21:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
         vy[x,y,z]=vy[x,y,z]-vmax*syy[x,y,z]
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-    elif BCs[x,y,x] == 22:
+    elif BCs[x,y,z] == 22:
 
         vx[x,y,z]=vx[x,y,z]+vminx*sxx[x+1,y,z]
         vy[x,y,z]=vy[x,y,z]-vmax*syy[x,y,z]
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
-    elif BCs[x,y,x] == 23:
+    elif BCs[x,y,z] == 23:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
         vy[x,y,z]=vy[x,y,z]+vminy*syy[x,y+1,z]
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-    elif BCs[x,y,x] == 24:
+    elif BCs[x,y,z] == 24:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
         vy[x,y,z]=vy[x,y,z]+vminy*syy[x,y+1,z]
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
 
-    elif BCs[x,y,x] == 25:
+    elif BCs[x,y,z] == 25:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
         vy[x,y,z]=vy[x,y,z]-vmax*syy[x,y,z]
         vz[x,y,z]=vz[x,y,z]+vminz*szz[x,y,z+1]
 
-    elif BCs[x,y,x] == 26:
+    elif BCs[x,y,z] == 26:
 
         vx[x,y,z]=vx[x,y,z]-vmax*sxx[x,y,z]
         vy[x,y,z]=vy[x,y,z]-vmax*syy[x,y,z]
         vz[x,y,z]=vz[x,y,z]-vmax*szz[x,y,z]
+        
+    elif BCs[x,y,z] == 99:
+        vx[x,y,z]=0
+        vy[x,y,z]=0
+        vz[x,y,z]=0
+        
+    elif BCs[x,y,z] == 0:
+        updateVelocity(x,y,z)
+        
 
-    else: print('error: ',x,y,z)
-   
+    else: print('error: ',x,y,z, BCs[x,y,z])
+
+
+# In[13]:
+
 
 #Set Boundary Conditions for edges off the rail
 #
@@ -938,10 +981,10 @@ def setBCsForRail():
             BCs[:,y,z]=99
 
     # zone 3 of air, right of web
-    for yy in range(int(13/36*gw1)):
-        y = yy + int(24/36*gw1)
+    for yy in range(int(12/36*gw1)):
+        y = yy + int(24/36*gw1)-1
         for zz in range(int(16/36*gh1)):
-            z = zz + int(8/36*gh1)
+            z = zz + int(8/36*gh1) -1
             BCs[:,y,z]=99
 
     # zone 4 of air, right of head
@@ -988,17 +1031,19 @@ def setBCsForRail():
     #top edge of foot on left
     BCs[:,0,int(8/36*gh1)]=13
     #top endge of foot on right
-    BCs[:,gw1,int(8/36*gh1)]=14
+    BCs[:,ymax,int(8/36*gh1)]=14
     #bottom of head on left
     BCs[:,int(5/36*gw1),int(12/36*gh1)]=9
     #bottom of head on right
     BCs[:,int(30/36*gw1),int(12/36*gh1)]=10
     #Top of head on left
-    BCs[:,int(5/36*gw1),gh1]=13
+    BCs[:,int(5/36*gw1),zmax]=13
     #top of head on right
-    BCs[:,int(30/36*gw1),gh1]=14
+    BCs[:,int(30/36*gw1),zmax]=14
 
-    
+# In[14]:
+
+
 def setBCsCube(x,y,z):
  
     #corners
@@ -1047,9 +1092,16 @@ def setBCs(mode = 1):
     if mode==2:
         setBCsForRail()
                 
+
+
+# In[15]:
+
+
 # %%
 Points = []
 BoundaryPoints=[]
+
+setBCs(2)
 
 for x in range(gl1-1):
     for y in range(gw1-1):
@@ -1060,16 +1112,11 @@ for x in range(gl1-1):
                 BoundaryPoints.append([x,y,z])
 
 
-# %%
-print(np.shape(Points)[0] + np.shape(BoundaryPoints)[0], gl1, gw1, gh1, (gl1-1)*(gw1-1)*(gh1-1))
+
 
 # %%
 stime = time.time()
 jobs = 15
-
-
-WriteFile = open('/sciclone/scr10/dchendrickson01/3DImg/.Status.txt','a')
-
 
 for t in range(0,Tsteps):
     
@@ -1089,7 +1136,7 @@ for t in range(0,Tsteps):
         dszz = dszz.T
         dszz *= 795
         szz[t:int(24/36*gw1)+1+t,int(6/36*gw1):int(30/36*gw1),zmax-1] -= dszz
-    
+        
     
     #update Velocities
     #Parallel(n_jobs=jobs,prefer="threads")(delayed(updateVelocity)(i[0],i[1],i[2]) for i in Points)
@@ -1124,21 +1171,25 @@ for t in range(0,Tsteps):
     
     
     #save vx cut figure
-    if t%10==0:
-        fig=plt.figure()
+    if t%1==0:
+        fig=plt.figure(figsize=(6,1.5),dpi=300)
         plt.contourf(np.transpose(vz[:,int(gw1/2),:]), cmap='seismic')
-        plt.savefig('/sciclone/scr10/dchendrickson01/3DImg/MiddleCut/vzmidCut'+str(t).zfill(5)+'.png')
+        plt.savefig('/sciclone/scr10/dchendrickson01/3DImg/MiddleCut/MiddleCut'+str(t).zfill(5)+'.png')
         plt.close(fig)
-        fig=plt.figure()
+        fig=plt.figure(figsize=(6,1.5),dpi=300)
         rVel = np.sqrt(np.transpose(vx[:,:,zmax-1]) **2 + np.transpose(vy[:,:,zmax-1]) **2 + np.transpose(vz[:,:,zmax-1])**2)
         plt.contourf(rVel, cmap='seismic')
         plt.savefig('/sciclone/scr10/dchendrickson01/3DImg/TopSurface/TopSurface'+str(t).zfill(5)+'.png')
         plt.close(fig)
     
     
-    WriteFile.write(str(t)+'/'+str(Tsteps-1)+'checksums vx, sxx:'+str(np.sum(np.absolute(vx)))+', '+str(np.sum(np.absolute(sxx)))+', time: '+str( time.time()-stime))
+    print(t,'/',Tsteps-1,'checksums vx, sxx:',np.sum(np.absolute(vx)),np.sum(np.absolute(sxx)), time.time()-stime)
+
+
 
 # %%
+
+fig=plt.figure(figsize=(6,2),dpi=300)
 plt.plot(TopSig00,label='00%')
 plt.plot(TopSig10,label='10%')
 plt.plot(TopSig20,label='20%')
@@ -1151,6 +1202,10 @@ plt.plot(TopSig80,label='80%')
 plt.plot(TopSig90,label='90%')
 plt.savefig('/sciclone/scr10/dchendrickson01/3DImg/VerticalsBy10.png')
 plt.show()
+
+
+# In[ ]:
+
 
 # %%
 # make animated gif from saved EFIT figures
@@ -1165,9 +1220,31 @@ def make_gif(frame_folder, imageName = 'efit.gif'):
     frame_one = frames[0]
     frame_one.save(f"{frame_folder}/{imageName}", format="GIF", append_images=frames,
                save_all=True, duration=300, loop=0)
+    
+
+
+# In[ ]:
+
+
+
+# %%
+frame_folder='E:\\Documents\\Dan\Code\\3D_EFIT\\OtherCode\\images2'
+make_gif(frame_folder, 'VerticalCut.gif')
+frame_folder='E:\\Documents\\Dan\\Code\\3D_EFIT\\OtherCode\\images3'
+make_gif(frame_folder, 'TopSurface.gif')
+
+
+# In[ ]:
+
 
 # %%
 frame_folder='/sciclone/scr10/dchendrickson01/3DImg/MiddleCut'
 make_gif(frame_folder, 'VerticalCut.gif')
 frame_folder='/sciclone/scr10/dchendrickson01/3DImg/TopSurface'
 make_gif(frame_folder, 'TopSurface.gif')
+
+
+# In[ ]:
+
+
+gs / 5.0 /ts
