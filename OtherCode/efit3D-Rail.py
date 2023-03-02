@@ -141,7 +141,7 @@ if AirCut:
     for yy in range(int(4/36*gw1)-1):
         y = yy + int(23/36*gw1)+1
         for zz in range(int(12/36*gw1)):
-            z = zz + int(24/36*gw1)+1
+            z = zz + int(24/36*gw1)
             matProps[0,:,y,z]=rho2
             matProps[1,:,y,z]=lmbda2
             matProps[2,:,y,z]=mu2
@@ -1022,7 +1022,7 @@ def updateVelocityBoundary(x,y,z):
 # %%
 #Set Boundary Conditions for edges off the rail
 #
-def setBCsForRail(Ties = 2):
+def setBCsForRail(Ties = 3):
     # zone 1 of air left of web
     for yy in range(int(13/36*gw1)):
         y = yy + 0
@@ -1039,9 +1039,9 @@ def setBCsForRail(Ties = 2):
 
     # zone 3 of air, right of web
     for yy in range(int(13/36*gw1)):
-        y = yy + int(24/36*gw1)-1
+        y = yy + int(24/36*gw1)-2
         for zz in range(int(16/36*gh1)):
-            z = zz + int(8/36*gh1) -1
+            z = zz + int(8/36*gh1) -2
             BCs[:,y,z]=99
 
     # zone 4 of air, right of head
