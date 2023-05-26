@@ -22,10 +22,39 @@ nprocs=mpi_size
 # myid given glob_index = glob_index/npz = ghloc-2
 
 # set Constants
+
+#Dimmesnsion of simulation space in meters
+length1 = 2.0
+width1 = 0.1524
+height1 = 0.1524
+
+#is the rail supported by 0, 1 or 2 ties
+Ties = 3
+
+#Choose ferquency to be used for excitment
+frequency = 18000
+
+#Run for 4 Cycles:
+runtime = 5 / frequency 
+
+#Forcing Function Location and type
+# 1 for dropped wheel on top
+# 2 for rubbing flange on side
+FFunction = 1
+
 #MATERIAL 1 ((steel))
 pRatio1 = 0.29                                    #poission's ratio in 
 yModulus1 = 200 * (10**9)                           #youngs modulus in pascals
 rho1 = 7800                                        #density in kg/m^3
+
+
+#CALCULATED PARAMETERS FROM INPUTS
+#MATERIAL 2  (air)
+pRatio2= 0.99
+yModulus2= 1.13*(10**5)
+rho2 = 1.15       
+mu2 = yModulus2/(2*(1+pRatio2))                    
+lmbda2 = abs(2 * mu2 * pRatio2 / (1 - 2 * pRatio2))
 
 mu1 = yModulus1/(2*(1+pRatio1))                    #second Lame Parameter
 lmbda1 = 2 * mu1 * pRatio1 / (1 - 2 * pRatio1)     #first Lame Parameter
@@ -34,28 +63,9 @@ lmbda1 = 2 * mu1 * pRatio1 / (1 - 2 * pRatio1)     #first Lame Parameter
 cl1 = np.sqrt((lmbda1 + 2* mu1)/rho1)
 ct1 = np.sqrt(mu1/rho1)
 
-if myid == 0:
-    print('MPI info: \n')
-    print('MPI rank, size',myid,mpi_size)
-
-
-if myid == 0: 
-    print('material 1 wave speeds:' ,cl1,ct1)
-
-#Choose ferquency to be used for excitment
-frequency = 18000
-
 #calculate wave lengths for material 1
 omegaL1 = cl1 / frequency
 omegaT1 = ct1 / frequency
-
-
-#MATERIAL 2  (air)
-pRatio2= 0.99
-yModulus2= 1.13*(10**5)
-rho2 = 1.15       
-mu2 = yModulus2/(2*(1+pRatio2))                    
-lmbda2 = abs(2 * mu2 * pRatio2 / (1 - 2 * pRatio2))
 
 #Calculate speed of longitudinal and transverse waves in material 1
 cl2= np.sqrt((lmbda2 + 2* mu2)/rho2)
@@ -67,20 +77,6 @@ if myid == 0:
 #calculate wavelengths in material 2
 omegaL2 = cl2 / frequency
 omegaT2 = ct2 / frequency
-
-#dimensions of materials in meters
-#the dimensions of material 1 should be greater than material 2
-#diensions of material 1 
-
-length1 = 1.0
-width1 = 0.1524
-height1 = 0.1524
-
-#is the rail supported by 0, 1 or 2 ties
-Ties = 2
-
-#Run for 4 Cycles:
-runtime = 5 / frequency 
 
 #Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
 #ts = 1 / frequency / 10    #time step
@@ -132,16 +128,32 @@ if myid == 0:
 
 #MPI EJW Section 2 changes
 matPropsglob=np.zeros((4,gl1,gw1,gh1))
+signalLocation=np.zeros((gl1,gw1,gh1))
+
 matPropsglob[0,:,:,:]=rho1
 matPropsglob[1,:,:,:]=lmbda1
 matPropsglob[2,:,:,:]=mu1
 matPropsglob[3,:,:,:]=0
 
 #Make top surface work hardened:
-whlayer = int(0.0001/gs)
+whlayer = int(0.0002/gs)
 
 matPropsglob[0,:,:,gh1-whlayer:gh1-1]=rho1*1.25
 matPropsglob[1,:,:,gh1-whlayer:gh1-1]=lmbda1*1.5
+
+#Make the Signal Location grid
+if FFunction == 1:
+    pnodes = int(whlayer / 2)
+    contactLength = int(0.001 / gs)  #1 cm contact patch
+
+    signalLocation[0:contactLength,int(4/36*gw1):int(32/36*gw1), zmax - pnodes:zmax] = 1
+
+elif FFunction ==2:
+    pnodes = int(whlayer / 4)
+    contactLength = int(0.004 / gs)  #4 cm contact patch
+
+    signalLocation[0:contactLength,int(4/36*gw1)-pnodes:int(4/36*gw1)+pnodes, zmax - int(12/36*gh1):zmax] = 1
+  
 
 if myid == 0:
     print('globs made, line 145')
@@ -189,7 +201,6 @@ if AirCut:
             matPropsglob[3,:,y,z]=99
 
 #set the boundary conditions in material props4
-Ties = 2
 
 # top
 matPropsglob[3,:,:,zmax]=2
@@ -414,16 +425,20 @@ matProps0 = np.zeros((npx,gw1,gh1))
 matProps1 = np.zeros((npx,gw1,gh1))
 matProps2 = np.zeros((npx,gw1,gh1))
 matProps3 = np.zeros((npx,gw1,gh1))
+signalloc = np.zeros((npx,gw1,gh1))
 
 mpi_comm.Scatterv([matPropsglob[0,:,:,:],split,offset,MPI.DOUBLE], matProps0)
 mpi_comm.Scatterv([matPropsglob[1,:,:,:],split,offset,MPI.DOUBLE], matProps1)
 mpi_comm.Scatterv([matPropsglob[2,:,:,:],split,offset,MPI.DOUBLE], matProps2)
 mpi_comm.Scatterv([matPropsglob[3,:,:,:],split,offset,MPI.DOUBLE], matProps3)
+mpi_comm.Scatterv([signalLocation[:,:,:],split,offset,MPI.DOUBLE], signalloc)
+
 
 matProps0=distBox(matProps0,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 matProps1=distBox(matProps1,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 matProps2=distBox(matProps2,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 matProps3=distBox(matProps3,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+signalloc=distBox(signalloc,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 
 #Now slab has local versions with ghosts of matProps
 if (myid == 0) :
@@ -1192,13 +1207,10 @@ if (myid == 0 ):
     
 
 for t in range(0,Tsteps):
-#for t in range(0,40):
-    
-    #sin-exponential input
-    if (myid==inputid) :
-        vz[inputlocx,inputy,inputz]=vz[inputlocx,inputy,inputz]-szzConst * szz[inputlocx,inputy,inputz] + sinInputSignal[t]
 
-#    for x in range(gl1):
+    if FFunction == 2:
+        vz += signalLocation * sinInputSignal[t]
+
     for x in range(1,npx+1):
         for y in range(gw1):
             for z in range(gh1):
@@ -1219,6 +1231,10 @@ for t in range(0,Tsteps):
     sxy=distBox(sxyt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     sxz=distBox(sxzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     syz=distBox(syzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+
+    #if the forcing function is a stress
+    if FFunction == 1:
+        szz -= signalLocation * sinInputSignal[t]
 
     for x in range(1,npx+1):
         for y in range(gw1):
