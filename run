@@ -1,6 +1,6 @@
 #!/bin/tcsh
-#PBS -N pstress2
-#PBS -l nodes=2:bora:ppn=20
+#PBS -N RailSideRub
+#PBS -l nodes=6:bora:ppn=20
 #PBS -l walltime=72:00:00
 #PBS -k oe
 
@@ -8,4 +8,4 @@
 cd $PBS_O_WORKDIR
 
 conda activate mpi
-mpiexec -np 32 -rr python3 -u stressMPI-Rail.py >& log-1645.out
+mpiexec -np 32 -rr python3 -u stressMPI-Rail.py >& SideRub-0531-1522.out
