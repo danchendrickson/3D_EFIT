@@ -24,32 +24,33 @@ nprocs=mpi_size
 # myid given glob_index = glob_index/npz = ghloc-2
 
 # set Constants
-AirCut = True
-RailShape = True
+AirCut = False
+RailShape = False
 
 #Dimmesnsion of simulation space in meters
-length1 = 1.5
-width1 = 0.1524
-height1 = 0.1524
+length1 = 0.1
+width1 = 0.1
+height1 = 0.1
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
 
 #is the rail supported by 0, 1 or 2 ties
-Ties = 3
+Ties = 0
 
 #Choose ferquency to be used for excitment
-frequency = 16300
+frequency = 64000
 #frequency = 8100
 
 #Run for 4 Cycles:
-runtime = 8 / frequency 
+runtime = 10 / frequency 
 
 #Forcing Function Location and type
 # 1 for dropped wheel on top
 # 2 for rubbing flange on side
+# 3 for plane wave 
 
-FFunction = 1
+FFunction = 3
 
 WheelLoad = 173000 #crane force in Neutons
 
@@ -66,12 +67,14 @@ if FFunction == 1:
     imFolder += 'TopHit/'
 elif FFunction == 2:
     imFolder += 'SideRub/'
+elif FFunction == 3:
+    imFolder += 'CubeS/'
 
 
-#MATERIAL 2  (air)
-pRatio2= 0.98
-yModulus2= 1.13*(10**5)
-rho2 = 1.15       
+#MATERIAL 2  (made up)
+pRatio2= 0.3
+yModulus2= 100*(10**8)
+rho2 = 3000       
 mu2 = yModulus2/(2*(1+pRatio2))                    
 lmbda2 = abs(2 * mu2 * pRatio2 / (1 - 2 * pRatio2))
 
@@ -109,41 +112,15 @@ gl1 = int(math.ceil(length1 / gs)) +1       #length
 gw1 = int(math.ceil(width1 / gs)) +1       #width
 gh1 = int(math.ceil(height1 / gs)) +1       #height
 
-#frequency = 16355
+frequency = 33333
 
 # Keep these as the global values
 xmax=gl1-1
 ymax=gw1-1
 zmax=gh1-1
 
-## for latter rail section, define the dimmmensions in terms of grid
-HeadThickness = 0.05
-WebThickness = 0.035
-FootThickness = 0.03
-HeadWidth = 0.102
-
-relHeadThick = HeadThickness / height1
-relWeb = WebThickness / width1
-relFoot = FootThickness / height1
-relHeadWidth = HeadWidth / width1
-
-relStartHeadThick = 1 - relHeadThick
-relStartWeb = 0.5 - (relWeb / 2.0)
-relEndWeb = 0.5 + (relWeb / 2.0)
-relStartHeadWidth = 0.5 - (relHeadWidth / 2.0)
-relEndHeadWidth = 0.5 + (relHeadWidth / 2.0)
-
-
-gridStartHead = round(gh1 * relStartHeadThick)
-gridStartWeb = round(gw1 * relStartWeb)
-gridEndWeb = round(gw1 * relEndWeb)
-gridEndFoot = round(gh1 * relFoot)
-gridStartHeadWidth = round(gw1 * relStartHeadWidth)
-gridEndHeadWidth = round(gw1  * relEndHeadWidth)
-
-gridHalfHead = int(zmax - gridStartHead)
-
 #####
+
 
 
 
@@ -184,11 +161,11 @@ matPropsglob[1,:,:,:]=lmbda1
 matPropsglob[2,:,:,:]=mu1
 matPropsglob[3,:,:,:]=0
 
-#Make top surface work hardened:
-whlayer = int(0.0002/gs)
-
-matPropsglob[0,:,:,gh1-whlayer:gh1-1]=rho1*1.25
-matPropsglob[1,:,:,gh1-whlayer:gh1-1]=lmbda1*1.5
+for x in range(gl1):
+    for y in range(gw1):
+        matPropsglob[0,x,y,:]=rho2
+        matPropsglob[1,x,y,:]=lmbda2
+        matPropsglob[2,x,y,:]=mu2
 
 #Make the Signal Location grid
 if FFunction == 1:
@@ -210,7 +187,9 @@ elif FFunction == 2:
 
     ## Find the share of the force per node for FF1
 
-specificWheelLoad = WheelLoad / np.sum(signalLocation)
+elif FFunction == 3:
+    signalLocation[:3,:,:] = 1
+
 
 if myid == 0:
     print('globs made, line 145')
@@ -1330,7 +1309,7 @@ if (myid == 0) :
 
 szzConst=2*ts/(gs*rho1)
 
-amp=10000
+amp=100
 decayRate= 0
 sinConst=ts*amp/rho1
 
@@ -1417,6 +1396,8 @@ for t in range(0,Tsteps):
 
     if FFunction == 2:
         vz += signalloc * sinInputSignal[t]
+    elif FFunction ==3:
+        vz += signalloc * sinInputSignal[t]
 
     for x in range(1,npx+1):
         for y in range(gw1):
@@ -1467,18 +1448,21 @@ for t in range(0,Tsteps):
     # save vx cut figure
     # ADD GATHER for plotting
 
+    vxg = np.zeros((gl1,gw1,gh1))
     vzg = np.zeros((gl1,gw1,gh1))
     vyg = np.zeros((gl1,gw1,gh1))
     
     if t%10==0:
+        vxt=vx[1:npx+1,:,:]        
+        mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
         vzt=vz[1:npx+1,:,:]        
         mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
         vyt=vy[1:npx+1,:,:]        
         mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])
         if (myid == 0 ) :
             fig=plt.figure()
-            plt.contourf(np.transpose(vyg[:,:,int(gh1/2)]), cmap='seismic')
-            plt.savefig(imFolder+'Mid/vyWeb'+str(t).zfill(5)+'.png')
+            plt.contourf(np.transpose(vzg[:,:,int(gh1/2)]), cmap='seismic')
+            plt.savefig(imFolder+'Mid/vzWeb'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
             
@@ -1489,8 +1473,26 @@ for t in range(0,Tsteps):
             plt.close(fig)    
             
             fig=plt.figure()
-            plt.contourf(np.transpose(vyg[:,:,gridHalfHead]), cmap='seismic')
-            plt.savefig(imFolder + 'Head/vyHead'+str(t).zfill(5)+'.png')
+            plt.contourf(np.transpose(vzg[int(gl1/2),:,:]), cmap='seismic')
+            plt.savefig(imFolder + 'Head/vzHead'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)  
+               
+            fig=plt.figure()
+            plt.contourf(np.transpose(vxg[:,:,int(gh1/2)]), cmap='seismic')
+            plt.savefig(imFolder+'Mid/vxWeb'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(vxg[:,int(gw1/2),:]), cmap='seismic')
+            plt.savefig(imFolder + 'Vert/vxVertCut'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)    
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(vxg[int(gl1/2),:,:]), cmap='seismic')
+            plt.savefig(imFolder + 'Head/vxHead'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)  
     
