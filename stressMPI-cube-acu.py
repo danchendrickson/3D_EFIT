@@ -28,7 +28,7 @@ AirCut = False
 RailShape = False
 
 #Dimmesnsion of simulation space in meters
-length1 = 0.1
+length1 = 0.3
 width1 = 0.1
 height1 = 0.1
 
@@ -43,7 +43,7 @@ frequency = 64000
 #frequency = 8100
 
 #Run for 4 Cycles:
-runtime = 6 / frequency 
+runtime = 7 / frequency 
 
 #Forcing Function Location and type
 # 1 for dropped wheel on top
@@ -259,6 +259,15 @@ def updateStress(x,y,z):
 
             ds=shearyz*(vy[x,y,z+1]-vy[x,y,z]+vz[x,y+1,z]-vz[x,y,z])
             syz[x,y,z]=syz[x,y,z]+ds*ts
+
+        elif (matProps3[x,y,z] == 99 or matProps3[x,y,z] == 1 or matProps3[x,y,z] == 2 or matProps3[x,y,z] == 3
+              or matProps3[x,y,z] == 4 or matProps3[x,y,z] == 5 or matProps3[x,y,z] == 6):
+            sxx[x,y,z]=0
+            syy[x,y,z]=0
+            szz[x,y,z]=0
+            sxy[x,y,z]=0
+            sxz[x,y,z]=0
+            syz[x,y,z]=0
 
         elif matProps3[x,y,z] == 1 or matProps3[x,y,z] == 35:
 
@@ -623,14 +632,6 @@ def updateStress(x,y,z):
             syz[x,y,z]=0
 
 
-        elif matProps3[x,y,z] == 99:
-            sxx[x,y,z]=0
-            syy[x,y,z]=0
-            szz[x,y,z]=0
-            sxy[x,y,z]=0
-            sxz[x,y,z]=0
-            syz[x,y,z]=0
-
         else: print('error:', str(x), str(y), str(z))
     except:
         print('Boundary Conditon isssue Stress: ', str(x), str(y), str(z), str(matProps3[x,y,z]))
@@ -652,7 +653,7 @@ def updateVelocity(x,y,z):
 
         vmax=(2*ts)/(matProps0[x,y,z]*gs)
 
-        #FACES
+        
         if matProps3[x,y,z] == 0:
             dvxConst=2*(1/gs)*(1/(matProps0[x,y,z]+matProps0[x+1,y,z]))
             dvyConst=2*(1/gs)*(1/(matProps0[x,y,z]+matProps0[x,y+1,z]))
@@ -667,6 +668,14 @@ def updateVelocity(x,y,z):
             dv=dvzConst*(sxz[x,y,z]-sxz[x-1,y,z]+syz[x,y,z]-syz[x,y-1,z]+szz[x,y,z+1]-szz[x,y,z])
             vz[x,y,z]=vz[x,y,z]+dv*ts
 
+        #FACES
+        elif (matProps3[x,y,z] == 99 or matProps3[x,y,z] == 1 or matProps3[x,y,z] == 2 or matProps3[x,y,z] == 3
+              or matProps3[x,y,z] == 4 or matProps3[x,y,z] == 5 or matProps3[x,y,z] == 6):
+            vx[x,y,z]=0
+            vy[x,y,z]=0
+            vz[x,y,z]=0
+
+            
         elif matProps3[x,y,z] == 1:
             dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
             vx[x,y,z]=vx[x,y,z]+dv*ts
@@ -1063,8 +1072,7 @@ def setSimSpaceBCs(matPropsglob):
     # bottom right back
     matPropsglob[3,xmax,zmax,0]=99
 
-    '''
-    #faces
+    '''#faces
     # top
     matPropsglob[3,:,:,zmax]=2
     # bottom 
@@ -1077,6 +1085,7 @@ def setSimSpaceBCs(matPropsglob):
     matPropsglob[3,0,:,:] = 5
     # back
     matPropsglob[3,xmax,:,:] = 6
+    
     # edges
     # top left
     matPropsglob[3,:,0,zmax]=13
@@ -1473,7 +1482,7 @@ for t in range(0,Tsteps):
     if FFunction == 2:
         vz += signalloc * sinInputSignal[t]
     elif FFunction ==3:
-        vx += (signalloc * sinInputSignal[t])
+        vy += (signalloc * sinInputSignal[t])
 
     for x in range(1,npx+1):
         for y in range(gw1):
@@ -1541,31 +1550,31 @@ for t in range(0,Tsteps):
         if t%10==0:
         
             fig=plt.figure()
-            plt.contourf(np.transpose(vxg[:,:,int(gh1/2)]), cmap='seismic')
+            plt.contourf(np.transpose(vyg[:,:,int(gh1/2)]), cmap='seismic')
             plt.savefig(imFolder+'Mid/vyWeb'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
             
             fig=plt.figure()
-            plt.contourf(np.transpose(vxg[:,int(gw1/2),:]), cmap='seismic')
+            plt.contourf(np.transpose(vyg[:,int(gw1/2),:]), cmap='seismic')
             plt.savefig(imFolder + 'Vert/vzVertCut'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)    
             
             fig=plt.figure()
-            plt.contourf(np.transpose(vxg[int(gl1/2),:,:]), cmap='seismic')
+            plt.contourf(np.transpose(vyg[int(gl1/2),:,:]), cmap='seismic')
             plt.savefig(imFolder + 'Head/vyHead'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)  
     
             fig=plt.figure()
-            plt.contourf(np.transpose(vxg[:,:,int(gh1/4)]), cmap='seismic')
+            plt.contourf(np.transpose(vyg[:,:,int(gh1/4)]), cmap='seismic')
             plt.savefig(imFolder+'zplane25/vyWeb'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
             
             fig=plt.figure()
-            plt.contourf(np.transpose(vxg[:,:,int(3*gh1/4)]), cmap='seismic')
+            plt.contourf(np.transpose(vyg[:,:,int(3*gh1/4)]), cmap='seismic')
             plt.savefig(imFolder+'zplane75/vyWeb'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
@@ -1590,13 +1599,13 @@ for t in range(0,Tsteps):
 if (myid == 0) :
     fig=plt.figure(figsize=(8,5), dpi=600)
     plt.plot(MSignal[:,0])
-    plt.savefig('vxsignalCA.png')
+    plt.savefig(imFolder+'vxsignalCA.png')
     plt.clf()
     plt.plot(MSignal[:,1])
-    plt.savefig('vysignalCA.png')
+    plt.savefig(imFolder+'vysignalCA.png')
     plt.clf()
     plt.plot(MSignal[:,2])
-    plt.savefig('vzsignalCA.png')
+    plt.savefig(imFolder+'vzsignalCA.png')
 
     vxDisplacement = [0]
     vyDisplacement = [0]
@@ -1616,7 +1625,7 @@ if (myid == 0) :
     plt.plot(Times,vyDisplacement,label='y')
     plt.plot(Times,vzDisplacement,label='z')
     plt.legend()
-    plt.savefig('DisplaceMid.png')
+    plt.savefig(imFolder+'DisplaceMid.png')
     
     vxDisplacement = [0]
     vyDisplacement = [0]
@@ -1632,7 +1641,7 @@ if (myid == 0) :
     plt.plot(Times,vxDisplacement)
     plt.plot(Times,vyDisplacement)
     plt.plot(Times,vzDisplacement)
-    plt.savefig('DisplaceFront.png')
+    plt.savefig(imFolder+'DisplaceFront.png')
     
     vxDisplacement = [0]
     vyDisplacement = [0]
@@ -1648,7 +1657,7 @@ if (myid == 0) :
     plt.plot(Times,vxDisplacement)
     plt.plot(Times,vyDisplacement)
     plt.plot(Times,vzDisplacement)
-    plt.savefig('DisplaceBack.png')
+    plt.savefig(imFolder+'DisplaceBack.png')
      
     vxDisplacement = [0]
     vyDisplacement = [0]
@@ -1664,7 +1673,7 @@ if (myid == 0) :
     plt.plot(Times,vxDisplacement)
     plt.plot(Times,vyDisplacement)
     plt.plot(Times,vzDisplacement)
-    plt.savefig('DisplaceRight.png')
+    plt.savefig(imFolder+'DisplaceRight.png')
      
     vxDisplacement = [0]
     vyDisplacement = [0]
@@ -1680,7 +1689,7 @@ if (myid == 0) :
     plt.plot(Times,vxDisplacement)
     plt.plot(Times,vyDisplacement)
     plt.plot(Times,vzDisplacement)
-    plt.savefig('DisplaceLeft.png')
+    plt.savefig(imFolder+'DisplaceLeft.png')
      
     vxDisplacement = [0]
     vyDisplacement = [0]
@@ -1696,7 +1705,7 @@ if (myid == 0) :
     plt.plot(Times,vxDisplacement)
     plt.plot(Times,vyDisplacement)
     plt.plot(Times,vzDisplacement)
-    plt.savefig('DisplaceUp.png')
+    plt.savefig(imFolder+'DisplaceUp.png')
      
         
     vxDisplacement = [0]
@@ -1713,18 +1722,18 @@ if (myid == 0) :
     plt.plot(Times,vxDisplacement)
     plt.plot(Times,vyDisplacement)
     plt.plot(Times,vzDisplacement)
-    plt.savefig('DisplaceDown.png')
+    plt.savefig(imFolder+'DisplaceDown.png')
      
    
 
     #Data = [MSignal,USignal,DSignal,LSignal,RSignal,FSignal,BSignal]
     print(np.shape(MSignal), np.shape(np.asarray(MSignal)))
     
-    np.matrix(MSignal.T).tofile('MSignal.csv',sep=',')
-    np.matrix(USignal.T).tofile('USignal.csv',sep=',')
-    np.matrix(DSignal.T).tofile('DSignal.csv',sep=',')
-    np.matrix(LSignal.T).tofile('LSignal.csv',sep=',')
-    np.matrix(RSignal.T).tofile('RSignal.csv',sep=',')
-    np.matrix(FSignal.T).tofile('FSignal.csv',sep=',')
-    np.matrix(BSignal.T).tofile('BSignal.csv',sep=',')
+    np.matrix(MSignal.T).tofile(imFolder+'MSignal.csv',sep=',')
+    np.matrix(USignal.T).tofile(imFolder+'USignal.csv',sep=',')
+    np.matrix(DSignal.T).tofile(imFolder+'DSignal.csv',sep=',')
+    np.matrix(LSignal.T).tofile(imFolder+'LSignal.csv',sep=',')
+    np.matrix(RSignal.T).tofile(imFolder+'RSignal.csv',sep=',')
+    np.matrix(FSignal.T).tofile(imFolder+'FSignal.csv',sep=',')
+    np.matrix(BSignal.T).tofile(imFolder+'BSignal.csv',sep=',')
     
