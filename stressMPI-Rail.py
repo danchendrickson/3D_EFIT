@@ -39,7 +39,7 @@ imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
 Ties = 3
 
 #Choose ferquency to be used for excitment
-frequency = 16300
+frequency = 16350
 #frequency = 8100
 
 #Run for 4 Cycles:
@@ -49,7 +49,7 @@ runtime = 8 / frequency
 # 1 for dropped wheel on top
 # 2 for rubbing flange on side
 
-FFunction = 1
+FFunction = 2
 
 WheelLoad = 173000 #crane force in Neutons
 
@@ -99,22 +99,47 @@ omegaT2 = ct2 / frequency
 
 #Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
 #ts = 1 / frequency / 10    #time step
-gs = (min(omegaL1, omegaT1,omegaL2,omegaT2) /12)    #grid step
-ts = gs/((max(cl1,ct1,cl2,ct2))*(np.sqrt(3)))*0.95 #time step
+gs = (min(omegaL1, omegaT1,omegaL2,omegaT2) /13)    #grid step initial
 
-Tsteps = int(math.ceil(runtime / ts)) + 1       #total Time Steps
 
 #number of grid points
 gl1 = int(math.ceil(length1 / gs)) +1       #length 
 gw1 = int(math.ceil(width1 / gs)) +1       #width
-gh1 = int(math.ceil(height1 / gs)) +1       #height
+gh1 = int(math.ceil(height1 / gs)) +1      #height
 
-#frequency = 16355
+frequency = 16350
+
+#MPI EJW Section 1
+#extend the length of the beam so that the number of nodes in the x dimmension 
+#is the evenly divisible by the number of processors
+if (gl1 % nprocs) != 0:
+    gl1 += nprocs - (gl1 % nprocs)
+
+    
+#for cube only, to make a cube again, not for rail where you would just add length
+#gw1=gl1
+#gh1=gl1
+#gs = length1 / gl1
+    
+ts = gs/((max(cl1,ct1,cl2,ct2))*(np.sqrt(3)))*0.93 #time step
+Tsteps = int(math.ceil(runtime / ts)) + 1       #total Time Steps
+
+
+#check you did it right
+if (gl1 % nprocs) != 0:
+    if myid == 0:
+        print("Hey, gl1 not divisible by nproc",gl1,nprocs)
+        sys.exit()
+npx=int(gl1/nprocs)
 
 # Keep these as the global values
 xmax=gl1-1
 ymax=gw1-1
 zmax=gh1-1
+
+#####
+if myid == 0:
+    print("gl1,npx,nproc",gl1,npx,nprocs)
 
 ## for latter rail section, define the dimmmensions in terms of grid
 HeadThickness = 0.05
@@ -145,25 +170,10 @@ gridHalfHead = int(zmax - gridStartHead)
 
 #####
 
+#add spacing at height
+gh1 += 5
 
-
-#MPI EJW Section 1
-#extend the length of the beam so that the number of nodes in the x dimmension 
-#is the evenly divisible by the number of processors
-if (gl1 % nprocs) != 0:
-    gl1 += nprocs - (gl1 % nprocs)
-
-#check you did it right
-if (gl1 % nprocs) != 0:
-    if myid == 0:
-        print("Hey, gl1 not divisible by nproc",gl1,nprocs)
-        sys.exit()
-npx=int(gl1/nprocs)
-
-
-if myid == 0:
-    print("gl1,npx,nproc",gl1,npx,nprocs)
-
+    
 #print(runtime, ts, gs, Tsteps, gl, gh)
 
 if myid == 0:
@@ -179,6 +189,9 @@ if myid == 0:
 matPropsglob=np.zeros((4,gl1,gw1,gh1))
 signalLocation=np.zeros((gl1,gw1,gh1))
 
+if myid == 0:
+    print('193')
+
 matPropsglob[0,:,:,:]=rho1
 matPropsglob[1,:,:,:]=lmbda1
 matPropsglob[2,:,:,:]=mu1
@@ -187,8 +200,11 @@ matPropsglob[3,:,:,:]=0
 #Make top surface work hardened:
 whlayer = int(0.0002/gs)
 
-matPropsglob[0,:,:,gh1-whlayer:gh1-1]=rho1*1.25
-matPropsglob[1,:,:,gh1-whlayer:gh1-1]=lmbda1*1.5
+#matPropsglob[0,:,:,gh1-whlayer:gh1-1]=rho1*1.25
+#matPropsglob[1,:,:,gh1-whlayer:gh1-1]=lmbda1*1.5
+
+if myid == 0:
+    print('205')
 
 #Make the Signal Location grid
 if FFunction == 1:
@@ -198,7 +214,7 @@ if FFunction == 1:
     #starting at .25 down, to be between the first 2 ties
     WheelStartPoint = int(0.25 * gl1)
     
-    signalLocation[WheelStartPoint:WheelStartPoint+contactLength,gridStartHeadWidth:gridEndHeadWidth, -3:] = 1
+    signalLocation[WheelStartPoint:WheelStartPoint+contactLength,gridStartHeadWidth:gridEndHeadWidth, -7:-4] = 1
     
 elif FFunction == 2:
     pnodes = int(whlayer / 4)
@@ -213,7 +229,7 @@ elif FFunction == 2:
 specificWheelLoad = WheelLoad / np.sum(signalLocation)
 
 if myid == 0:
-    print('globs made, line 145')
+    print('globs made, line 225')
 
 #########
 # FUnctions
@@ -274,6 +290,14 @@ def updateStress(x,y,z):
 
             ds=shearyz*(vy[x,y,z+1]-vy[x,y,z]+vz[x,y+1,z]-vz[x,y,z])
             syz[x,y,z]=syz[x,y,z]+ds*ts
+
+        elif matProps3[x,y,z] == 99:
+            sxx[x,y,z]=0
+            syy[x,y,z]=0
+            szz[x,y,z]=0
+            sxy[x,y,z]=0
+            sxz[x,y,z]=0
+            syz[x,y,z]=0
 
         elif matProps3[x,y,z] == 1 or matProps3[x,y,z] == 35:
 
@@ -638,14 +662,6 @@ def updateStress(x,y,z):
             syz[x,y,z]=0
 
 
-        elif matProps3[x,y,z] == 99:
-            sxx[x,y,z]=0
-            syy[x,y,z]=0
-            szz[x,y,z]=0
-            sxy[x,y,z]=0
-            sxz[x,y,z]=0
-            syz[x,y,z]=0
-
         else: print('error:', str(x), str(y), str(z))
     except:
         print('Boundary Conditon isssue Stress: ', str(x), str(y), str(z), str(matProps3[x,y,z]))
@@ -681,6 +697,13 @@ def updateVelocity(x,y,z):
 
             dv=dvzConst*(sxz[x,y,z]-sxz[x-1,y,z]+syz[x,y,z]-syz[x,y-1,z]+szz[x,y,z+1]-szz[x,y,z])
             vz[x,y,z]=vz[x,y,z]+dv*ts
+
+
+        #incase non boundaries or unknown areas snuck through
+        elif matProps3[x,y,z] == 99:
+            vx[x,y,z]=0
+            vy[x,y,z]=0
+            vz[x,y,z]=0
 
         elif matProps3[x,y,z] == 1:
             dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
@@ -963,13 +986,6 @@ def updateVelocity(x,y,z):
             vy[x,y,z]=0
             vz[x,y,z]=0
 
-
-        #incase non boundaries or unknown areas snuck through
-        elif matProps3[x,y,z] == 99:
-            vx[x,y,z]=0
-            vy[x,y,z]=0
-            vz[x,y,z]=0
-
         else: print('error: ',x,y,z, matProps3[x,y,z])
     except:
         print('Boundary Conditon isssue Velocity: ', str(x), str(y), str(z), str(matProps3[x,y,z]))
@@ -1017,6 +1033,12 @@ def setAirCut(matPropsglob):
             matPropsglob[2,:,y,z]=mu2
             matPropsglob[3,:,y,z]=99
             
+    # zone 5 ABove rail
+    matPropsglob[0,-4:,:]=rho2
+    matPropsglob[1,-4:,:]=lmbda2
+    matPropsglob[2,-4:,:]=mu2
+    matPropsglob[3,-2:,:]=99
+            
     return matPropsglob
 
 def setSimSpaceBCs(matPropsglob):
@@ -1024,85 +1046,119 @@ def setSimSpaceBCs(matPropsglob):
     
     #faces
     # top
-    matPropsglob[3,:,:,zmax]=2
+    matPropsglob[3,:,:,zmax]=99
+    # bottom 
+    matPropsglob[3,:,:,0]=99
+    # left
+    matPropsglob[3,:,0,:]=99
+    # right
+    matPropsglob[3,:,ymax,:]=99
+    # Front
+    matPropsglob[3,0,:,:] = 99
+    # back
+    matPropsglob[3,xmax,:,:] = 99
+    # edges
+    # top left
+    matPropsglob[3,:,0,zmax]=99
+    # top rigight
+    matPropsglob[3,:,ymax,zmax]=99
+    # bottom left
+    matPropsglob[3,:,0,0]=99
+    # bottom right
+    matPropsglob[3,:,ymax,0]=99
+    # front left
+    matPropsglob[3,0,0,:]=15
+    # front right
+    matPropsglob[3,0,ymax,:]=99
+    # back left
+    matPropsglob[3,xmax,0,:]=99
+    # back right
+    matPropsglob[3,xmax,ymax,:]=99
+    # front top
+    matPropsglob[3,0,:,zmax]=99
+    # front bottom
+    matPropsglob[3,0,:,0]=99
+    # back top
+    matPropsglob[3,xmax,:,zmax]=99
+    # back bottom
+    matPropsglob[3,xmax,:,0]=99
+    ## Corners
+    # top left front
+    matPropsglob[3,0,0,zmax]=99
+    # top right front
+    matPropsglob[3,0,ymax,zmax]=99
+    # top left back
+    matPropsglob[3,xmax,0,zmax]=99
+    # top right back
+    matPropsglob[3,xmax,ymax,zmax]=99
+    # bottom left front
+    matPropsglob[3,0,0,0]=99
+    # bottom right front
+    matPropsglob[3,0,ymax,0]=99
+    # bottom left back
+    matPropsglob[3,xmax,0,0]=99
+    # bottom right back
+    matPropsglob[3,xmax,zmax,0]=99
 
+    '''#faces
+    # top
+    matPropsglob[3,:,:,zmax]=2
     # bottom 
     matPropsglob[3,:,:,0]=1
-
     # left
     matPropsglob[3,:,0,:]=3
-
     # right
     matPropsglob[3,:,ymax,:]=4
-    
     # Front
     matPropsglob[3,0,:,:] = 5
-    
     # back
     matPropsglob[3,xmax,:,:] = 6
-
+    
     # edges
     # top left
     matPropsglob[3,:,0,zmax]=13
-
     # top rigight
     matPropsglob[3,:,ymax,zmax]=14
-    
     # bottom left
     matPropsglob[3,:,0,0]=9
-    
     # bottom right
     matPropsglob[3,:,ymax,0]=10
-    
     # front left
     matPropsglob[3,0,0,:]=15
-    
     # front right
     matPropsglob[3,0,ymax,:]=16
-    
     # back left
     matPropsglob[3,xmax,0,:]=17
-    
     # back right
     matPropsglob[3,xmax,ymax,:]=18
-    
     # front top
     matPropsglob[3,0,:,zmax]=11
-    
     # front bottom
     matPropsglob[3,0,:,0]=7
-    
     # back top
     matPropsglob[3,xmax,:,zmax]=12
-    
     # back bottom
     matPropsglob[3,xmax,:,0]=8
-    
     ## Corners
     # top left front
     matPropsglob[3,0,0,zmax]=20
-    
     # top right front
     matPropsglob[3,0,ymax,zmax]=22
-    
     # top left back
     matPropsglob[3,xmax,0,zmax]=24
-    
     # top right back
     matPropsglob[3,xmax,ymax,zmax]=26
-    
     # bottom left front
     matPropsglob[3,0,0,0]=19
-    
     # bottom right front
     matPropsglob[3,0,ymax,0]=21
-    
     # bottom left back
     matPropsglob[3,xmax,0,0]=23
-    
     # bottom right back
     matPropsglob[3,xmax,zmax,0]=25
-
+    '''
+    
+    
     return matPropsglob
     
 def setRailBCs(matPropsglob):
@@ -1301,8 +1357,8 @@ matPropsglob = setSimSpaceBCs(matPropsglob)
     
 if RailShape:
     matPropsglob = setAirCut(matPropsglob)
-    matPropsglob = setRailBCs(matPropsglob)
-    matPropsglob = addTies(matPropsglob,2)
+    #matPropsglob = setRailBCs(matPropsglob)
+    #matPropsglob = addTies(matPropsglob,2)
 
 
 if myid == 0:
@@ -1325,7 +1381,7 @@ inputid=int(inputx / npx)
 inputlocx=int(inputx - inputid*npx+1)
 
 if (myid == 0) :
-    print("line 369: glb inputx, local inputx id, local inputx:  ",inputx,inputid,inputlocx)
+    print("line 1384: glb inputx, local inputx id, local inputx:  ",inputx,inputid,inputlocx)
 
 
 szzConst=2*ts/(gs*rho1)
@@ -1335,6 +1391,9 @@ decayRate= 0
 sinConst=ts*amp/rho1
 
 sinInputSignal=sinConst*np.sin(2*np.pi*frequency*timeVec)*np.exp(-decayRate*timeVec)
+
+if (myid == 0) :
+    print("line 1395")
 
 # MPI EJW Section #4 changes 
 
@@ -1364,6 +1423,10 @@ vxSignal=np.zeros(Tsteps)
 vySignal=np.zeros(Tsteps)
 vzSignal=np.zeros(Tsteps)
 
+if (myid == 0) :
+    print("line 1425")
+
+
 # Grab splits and offsets for scattering arrays
 # Only thing to scatter is matPropsglob
 # v's and s's are zero to start + source applied later 
@@ -1381,6 +1444,10 @@ else:
 
 split=mpi_comm.bcast(split)
 offset=mpi_comm.bcast(offset)
+
+
+if (myid == 0) :
+    print("line 1450")
 
 matProps0 = np.zeros((npx,gw1,gh1))
 matProps1 = np.zeros((npx,gw1,gh1))
@@ -1417,6 +1484,8 @@ for t in range(0,Tsteps):
 
     if FFunction == 2:
         vz += signalloc * sinInputSignal[t]
+    elif FFunction ==3:
+        vy += (signalloc * sinInputSignal[t])
 
     for x in range(1,npx+1):
         for y in range(gw1):
@@ -1441,7 +1510,7 @@ for t in range(0,Tsteps):
 
     #if the forcing function is a stress
     if FFunction == 1:
-        szz -= signalloc * specificWheelLoad
+        szz = signalloc * specificWheelLoad
 
     for x in range(1,npx+1):
         for y in range(gw1):
@@ -1459,25 +1528,32 @@ for t in range(0,Tsteps):
     vz=distBox(vzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 
     #record signals
-    if (myid==signalLocxid) :
-        vxSignal[t]=vx[signalLocxlocx,signalLocy,signalLocz]
-        vySignal[t]=vy[signalLocxlocx,signalLocy,signalLocz]
-        vzSignal[t]=vz[signalLocxlocx,signalLocy,signalLocz]
-
     # save vx cut figure
     # ADD GATHER for plotting
 
+    vxg = np.zeros((gl1,gw1,gh1))
     vzg = np.zeros((gl1,gw1,gh1))
     vyg = np.zeros((gl1,gw1,gh1))
+    vxt=vx[1:npx+1,:,:]        
+    mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
+    vzt=vz[1:npx+1,:,:]        
+    mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
+    vyt=vy[1:npx+1,:,:]        
+    mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])    
     
-    if t%10==0:
-        vzt=vz[1:npx+1,:,:]        
-        mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
-        vyt=vy[1:npx+1,:,:]        
-        mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])
-        if (myid == 0 ) :
+    if (myid == 0 ) :
+        USignal[t]=[vxg[USignalLocX,USignalLocY,USignalLocZ],vyg[USignalLocX,USignalLocY,USignalLocZ],vzg[USignalLocX,USignalLocY,USignalLocZ]]
+        DSignal[t]=[vxg[DSignalLocX,DSignalLocY,DSignalLocZ],vyg[DSignalLocX,DSignalLocY,DSignalLocZ],vzg[DSignalLocX,DSignalLocY,DSignalLocZ]]
+        RSignal[t]=[vxg[RSignalLocX,RSignalLocY,RSignalLocZ],vyg[RSignalLocX,RSignalLocY,RSignalLocZ],vzg[RSignalLocX,RSignalLocY,RSignalLocZ]]
+        LSignal[t]=[vxg[LSignalLocX,LSignalLocY,LSignalLocZ],vyg[LSignalLocX,LSignalLocY,LSignalLocZ],vzg[LSignalLocX,LSignalLocY,LSignalLocZ]]
+        MSignal[t]=[vxg[MSignalLocX,MSignalLocY,MSignalLocZ],vyg[MSignalLocX,MSignalLocY,MSignalLocZ],vzg[MSignalLocX,MSignalLocY,MSignalLocZ]]
+        FSignal[t]=[vxg[FSignalLocX,FSignalLocY,FSignalLocZ],vyg[FSignalLocX,FSignalLocY,FSignalLocZ],vzg[FSignalLocX,FSignalLocY,FSignalLocZ]]
+        BSignal[t]=[vxg[BSignalLocX,BSignalLocY,BSignalLocZ],vyg[BSignalLocX,BSignalLocY,BSignalLocZ],vzg[BSignalLocX,BSignalLocY,BSignalLocZ]]
+
+        if t%10==0:
+        
             fig=plt.figure()
-            plt.contourf(np.transpose(vyg[:,:,int(gh1/2)]), cmap='seismic')
+            plt.contourf(np.transpose(vzg[:,:,int(gh1/2)]), cmap='seismic')
             plt.savefig(imFolder+'Mid/vyWeb'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
@@ -1489,12 +1565,22 @@ for t in range(0,Tsteps):
             plt.close(fig)    
             
             fig=plt.figure()
-            plt.contourf(np.transpose(vyg[:,:,gridHalfHead]), cmap='seismic')
+            plt.contourf(np.transpose(vzg[int(gl1/2),:,:]), cmap='seismic')
             plt.savefig(imFolder + 'Head/vyHead'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)  
     
-
+            fig=plt.figure()
+            plt.contourf(np.transpose(vzg[:,:,int(gh1/4)]), cmap='seismic')
+            plt.savefig(imFolder+'zplane25/vyWeb'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(vzg[:,:,int(3*gh1/4)]), cmap='seismic')
+            plt.savefig(imFolder+'zplane75/vyWeb'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)
             
 
     # Collect vx, sxx checksum contributions for printing
@@ -1513,20 +1599,144 @@ for t in range(0,Tsteps):
         print(t,'/',Tsteps-1,'checksums vx, sxx:',ckvs,ckss, time.time()-stime)
     sys.stdout.flush()
 
-if (myid == signalLocxid) :
+if (myid == 0) :
+    fig=plt.figure(figsize=(8,5), dpi=600)
+    plt.plot(MSignal[:,0])
+    plt.savefig(imFolder+'vxsignalCA.png')
     plt.clf()
-    plt.plot(vxSignal)
-    plt.savefig('vxsignal.png')
-
-if (myid == signalLocxid) :
+    plt.plot(MSignal[:,1])
+    plt.savefig(imFolder+'vysignalCA.png')
     plt.clf()
-    plt.plot(vySignal)
-    plt.savefig('vysignal.png')
+    plt.plot(MSignal[:,2])
+    plt.savefig(imFolder+'vzsignalCA.png')
 
-if (myid == signalLocxid) :
+    vxDisplacement = [0]
+    vyDisplacement = [0]
+    vzDisplacement = [0]
+    
+    Times = np.linspace(0, len(MSignal), num=len(MSignal)+1)
+    Times *= ts
+    
+    for i in range(len(MSignal)):
+        vxDisplacement.append(MSignal[i][0] * ts)
+        vyDisplacement.append(MSignal[i][1] * ts)
+        vzDisplacement.append(MSignal[i][2] * ts)
+    
     plt.clf()
-    plt.plot(vzSignal)
-    plt.savefig('vzsignal.png')
+    plt.title('Middle Node')
+    plt.plot(Times,vxDisplacement,label='x')
+    plt.plot(Times,vyDisplacement,label='y')
+    plt.plot(Times,vzDisplacement,label='z')
+    plt.legend()
+    plt.savefig(imFolder+'DisplaceMid.png')
+    
+    vxDisplacement = [0]
+    vyDisplacement = [0]
+    vzDisplacement = [0]
+    
+    for i in range(len(FSignal)):
+        vxDisplacement.append(FSignal[i][0] * ts)
+        vyDisplacement.append(FSignal[i][1] * ts)
+        vzDisplacement.append(FSignal[i][2] * ts)
 
+    plt.clf()
+    plt.title('Front Node')
+    plt.plot(Times,vxDisplacement)
+    plt.plot(Times,vyDisplacement)
+    plt.plot(Times,vzDisplacement)
+    plt.savefig(imFolder+'DisplaceFront.png')
+    
+    vxDisplacement = [0]
+    vyDisplacement = [0]
+    vzDisplacement = [0]
+    
+    for i in range(len(BSignal)):
+        vxDisplacement.append(BSignal[i][0] * ts)
+        vyDisplacement.append(BSignal[i][1] * ts)
+        vzDisplacement.append(BSignal[i][2] * ts)
 
+    plt.clf()
+    plt.title('Back Node')
+    plt.plot(Times,vxDisplacement)
+    plt.plot(Times,vyDisplacement)
+    plt.plot(Times,vzDisplacement)
+    plt.savefig(imFolder+'DisplaceBack.png')
+     
+    vxDisplacement = [0]
+    vyDisplacement = [0]
+    vzDisplacement = [0]
+    
+    for i in range(len(RSignal)):
+        vxDisplacement.append(RSignal[i][0] * ts)
+        vyDisplacement.append(RSignal[i][1] * ts)
+        vzDisplacement.append(RSignal[i][2] * ts)
+
+    plt.clf()
+    plt.title('Right Node')
+    plt.plot(Times,vxDisplacement)
+    plt.plot(Times,vyDisplacement)
+    plt.plot(Times,vzDisplacement)
+    plt.savefig(imFolder+'DisplaceRight.png')
+     
+    vxDisplacement = [0]
+    vyDisplacement = [0]
+    vzDisplacement = [0]
+    
+    for i in range(len(LSignal)):
+        vxDisplacement.append(LSignal[i][0] * ts)
+        vyDisplacement.append(LSignal[i][1] * ts)
+        vzDisplacement.append(LSignal[i][2] * ts)
+
+    plt.clf()
+    plt.title('Left Node')
+    plt.plot(Times,vxDisplacement)
+    plt.plot(Times,vyDisplacement)
+    plt.plot(Times,vzDisplacement)
+    plt.savefig(imFolder+'DisplaceLeft.png')
+     
+    vxDisplacement = [0]
+    vyDisplacement = [0]
+    vzDisplacement = [0]
+    
+    for i in range(len(USignal)):
+        vxDisplacement.append(USignal[i][0] * ts)
+        vyDisplacement.append(USignal[i][1] * ts)
+        vzDisplacement.append(USignal[i][2] * ts)
+
+    plt.clf()
+    plt.title('Up Node')
+    plt.plot(Times,vxDisplacement)
+    plt.plot(Times,vyDisplacement)
+    plt.plot(Times,vzDisplacement)
+    plt.savefig(imFolder+'DisplaceUp.png')
+     
+        
+    vxDisplacement = [0]
+    vyDisplacement = [0]
+    vzDisplacement = [0]
+    
+    for i in range(len(DSignal)):
+        vxDisplacement.append(DSignal[i][0] * ts)
+        vyDisplacement.append(DSignal[i][1] * ts)
+        vzDisplacement.append(DSignal[i][2] * ts)
+
+    plt.clf()
+    plt.title('Down Node')
+    plt.plot(Times,vxDisplacement)
+    plt.plot(Times,vyDisplacement)
+    plt.plot(Times,vzDisplacement)
+    plt.savefig(imFolder+'DisplaceDown.png')
+     
+   
+
+    #Data = [MSignal,USignal,DSignal,LSignal,RSignal,FSignal,BSignal]
+    print(np.shape(MSignal), np.shape(np.asarray(MSignal)))
+    
+    np.matrix(MSignal.T).tofile(imFolder+'MSignal.csv',sep=',')
+    np.matrix(USignal.T).tofile(imFolder+'USignal.csv',sep=',')
+    np.matrix(DSignal.T).tofile(imFolder+'DSignal.csv',sep=',')
+    np.matrix(LSignal.T).tofile(imFolder+'LSignal.csv',sep=',')
+    np.matrix(RSignal.T).tofile(imFolder+'RSignal.csv',sep=',')
+    np.matrix(FSignal.T).tofile(imFolder+'FSignal.csv',sep=',')
+    np.matrix(BSignal.T).tofile(imFolder+'BSignal.csv',sep=',')
     
