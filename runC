@@ -8,4 +8,4 @@
 cd $PBS_O_WORKDIR
 
 conda activate mpi
-mpiexec -np 60 -rr python3 -u stressMPI-cube-acu.py >& CubeSherNB-0630-1145.out
+mpiexec -np 60 -rr python3 -u stressMPI-cube-acu.py >& CubeSherNB-0723-1555.out

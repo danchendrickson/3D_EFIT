@@ -26,7 +26,12 @@ nprocs=mpi_size
 # set Constants
 AirCut = False
 RailShape = False
+FFunction = 3
+figDPI = 300
 
+WheelLoad = 173000 #crane force in Neutons
+
+#
 #Dimmesnsion of simulation space in meters
 length1 = 0.3
 width1 = 0.1
@@ -39,7 +44,7 @@ imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
 Ties = 0
 
 #Choose ferquency to be used for excitment
-frequency = 64000
+frequency = 16001
 #frequency = 8100
 
 #Run for 4 Cycles:
@@ -50,11 +55,7 @@ runtime = 7 / frequency
 # 2 for rubbing flange on side
 # 3 for plane wave 
 
-FFunction = 3
-
-WheelLoad = 173000 #crane force in Neutons
-
-#MATERIAL 1 ((steel))
+MATERIAL 1 ((steel))
 pRatio1 = 0.29                                    #poission's ratio in 
 yModulus1 = 200 * (10**9)                           #youngs modulus in pascals
 rho1 = 7800                                        #density in kg/m^3
@@ -110,7 +111,7 @@ gl1 = int(math.ceil(length1 / gs)) +1       #length
 gw1 = int(math.ceil(width1 / gs)) +1       #width
 gh1 = int(math.ceil(height1 / gs)) +1       #height
 
-frequency = 33333
+#frequency = 33333
 
 #MPI EJW Section 1
 #extend the length of the beam so that the number of nodes in the x dimmension 
@@ -233,15 +234,6 @@ def updateStress(x,y,z):
             norm1=(1/gs)*(matProps1[x,y,z]+2*matProps2[x,y,z])
             norm2=(1/gs)*(matProps1[x,y,z])
 
-            shearDenomxy=(1/matProps2[x,y,z])+(1/matProps2[x+1,y,z])+(1/matProps2[x,y+1,z])+(1/matProps2[x+1,y+1,z])
-            shearxy=4*(1/gs)*(1/shearDenomxy)
-
-            shearDenomxz=(1/matProps2[x,y,z])+(1/matProps2[x+1,y,z])+(1/matProps2[x,y,z+1])+(1/matProps2[x+1,y,z+1])
-            shearxz=4*(1/gs)*(1/shearDenomxz)
-
-            shearDenomyz=(1/matProps2[x,y,z])+(1/matProps2[x,y+1,z])+(1/matProps2[x,y,z+1])+(1/matProps2[x,y+1,z+1])
-            shearyz=4*(1/gs)*(1/shearDenomyz)
-
             ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
             sxx[x,y,z]=sxx[x,y,z]+ds*ts
 
@@ -251,12 +243,18 @@ def updateStress(x,y,z):
             ds=norm1*(vz[x,y,z]-vz[x,y,z-1])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vy[x,y,z]-vy[x,y-1,z])
             szz[x,y,z]=szz[x,y,z]+ds*ts
 
+            shearDenomxy=(1/matProps2[x,y,z])+(1/matProps2[x+1,y,z])+(1/matProps2[x,y+1,z])+(1/matProps2[x+1,y+1,z])
+            shearxy=4*(1/gs)*(1/shearDenomxy)
             ds=shearxy*(vx[x,y+1,z]-vx[x,y,z]+vy[x+1,y,z]-vy[x,y,z])
             sxy[x,y,z]=sxy[x,y,z]+ds*ts
 
+            shearDenomxz=(1/matProps2[x,y,z])+(1/matProps2[x+1,y,z])+(1/matProps2[x,y,z+1])+(1/matProps2[x+1,y,z+1])
+            shearxz=4*(1/gs)*(1/shearDenomxz)
             ds=shearxz*(vx[x,y,z+1]-vx[x,y,z]+vz[x+1,y,z]-vz[x,y,z])
             sxz[x,y,z]=sxz[x,y,z]+ds*ts   
 
+            shearDenomyz=(1/matProps2[x,y,z])+(1/matProps2[x,y+1,z])+(1/matProps2[x,y,z+1])+(1/matProps2[x,y+1,z+1])
+            shearyz=4*(1/gs)*(1/shearDenomyz)
             ds=shearyz*(vy[x,y,z+1]-vy[x,y,z]+vz[x,y+1,z]-vz[x,y,z])
             syz[x,y,z]=syz[x,y,z]+ds*ts
 
@@ -1529,14 +1527,16 @@ for t in range(0,Tsteps):
     # ADD GATHER for plotting
 
     vxg = np.zeros((gl1,gw1,gh1))
-    vzg = np.zeros((gl1,gw1,gh1))
     vyg = np.zeros((gl1,gw1,gh1))
+    vzg = np.zeros((gl1,gw1,gh1))
+    
     vxt=vx[1:npx+1,:,:]        
     mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
+    vyt=vy[1:npx+1,:,:]        
+    mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])
     vzt=vz[1:npx+1,:,:]        
     mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
-    vyt=vy[1:npx+1,:,:]        
-    mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])    
+
     
     if (myid == 0 ) :
         USignal[t]=[vxg[USignalLocX,USignalLocY,USignalLocZ],vyg[USignalLocX,USignalLocY,USignalLocZ],vzg[USignalLocX,USignalLocY,USignalLocZ]]
@@ -1551,31 +1551,31 @@ for t in range(0,Tsteps):
         
             fig=plt.figure()
             plt.contourf(np.transpose(vyg[:,:,int(gh1/2)]), cmap='seismic')
-            plt.savefig(imFolder+'Mid/vyWeb'+str(t).zfill(5)+'.png')
+            plt.savefig(imFolder+'Mid/vyMidHeightShear'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
             
             fig=plt.figure()
             plt.contourf(np.transpose(vyg[:,int(gw1/2),:]), cmap='seismic')
-            plt.savefig(imFolder + 'Vert/vzVertCut'+str(t).zfill(5)+'.png')
+            plt.savefig(imFolder + 'Vert/vyVertShear'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)    
             
             fig=plt.figure()
             plt.contourf(np.transpose(vyg[int(gl1/2),:,:]), cmap='seismic')
-            plt.savefig(imFolder + 'Head/vyHead'+str(t).zfill(5)+'.png')
+            plt.savefig(imFolder + 'Head/vyMidLenShear'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)  
     
             fig=plt.figure()
             plt.contourf(np.transpose(vyg[:,:,int(gh1/4)]), cmap='seismic')
-            plt.savefig(imFolder+'zplane25/vyWeb'+str(t).zfill(5)+'.png')
+            plt.savefig(imFolder+'zplane25/vy25Shear'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
             
             fig=plt.figure()
             plt.contourf(np.transpose(vyg[:,:,int(3*gh1/4)]), cmap='seismic')
-            plt.savefig(imFolder+'zplane75/vyWeb'+str(t).zfill(5)+'.png')
+            plt.savefig(imFolder+'zplane75/vy75Shear'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
             
@@ -1597,7 +1597,7 @@ for t in range(0,Tsteps):
     sys.stdout.flush()
 
 if (myid == 0) :
-    fig=plt.figure(figsize=(8,5), dpi=600)
+    fig=plt.figure(figsize=(8,5), dpi=figDPI)
     plt.plot(MSignal[:,0])
     plt.savefig(imFolder+'vxsignalCA.png')
     plt.clf()
