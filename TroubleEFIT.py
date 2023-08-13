@@ -45,7 +45,7 @@ height1 = 0.2 #0.1524
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = 'RfRallBCs0'
+runName = 'RfRLowerBCandAllEdgeCorners'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
@@ -1018,36 +1018,56 @@ def setSimSpaceBC99(matPropsglob):
     matPropsglob[3,0,:,:] = 99
     matPropsglob[3,xmax,:,:] = 99
     
-    #matPropsglob[3,1:xmax,1:ymax,0] = 1
-    #matPropsglob[3,1:xmax,0,1:zmax] = 3
-    #matPropsglob[3,0,1:ymax,1:zmax] = 5
+    matPropsglob[3,1:xmax,1:ymax,0] = 1
+    matPropsglob[3,1:xmax,0,1:zmax] = 3
+    matPropsglob[3,0,1:ymax,1:zmax] = 5
     
     #matPropsglob[3,1:xmax,1:ymax,zmax] = 2
     #matPropsglob[3,1:xmax,ymax,1:zmax] = 4
     #matPropsglob[3,xmax,1:ymax,1:zmax] = 6
 
     # edges
-    # front bottom     matPropsglob[3,0,1:ymax,0]=7
-    # back bottom     matPropsglob[3,xmax,:,0]=8
-    # bottom left     matPropsglob[3,1:xmax,0,0]=9
-    # bottom right     matPropsglob[3,:,ymax,0]=10
-    # front top     matPropsglob[3,0,:,zmax]=11
-    # back top     matPropsglob[3,xmax,:,zmax]=12
-    # top left     matPropsglob[3,:,0,zmax]=13 
-    # top rigight     matPropsglob[3,:,ymax,zmax]=14
-    # front left     matPropsglob[3,0,0,1:zmax]=15
-    # front right     matPropsglob[3,0,ymax,:]=16
-    # back left     matPropsglob[3,xmax,0,:]=17
-    # back right     matPropsglob[3,xmax,ymax,:]=18
+    # front bottom 
+    matPropsglob[3,0,1:ymax,0]=7
+    # back bottom 
+    matPropsglob[3,xmax,:,0]=8
+    # bottom left 
+    matPropsglob[3,1:xmax,0,0]=9
+    # bottom right 
+    matPropsglob[3,:,ymax,0]=10
+    # front top 
+    matPropsglob[3,0,:,zmax]=11
+    # back top 
+    matPropsglob[3,xmax,:,zmax]=12
+    # top left 
+    matPropsglob[3,:,0,zmax]=13 
+    # top rigight 
+    matPropsglob[3,:,ymax,zmax]=14
+    # front left 
+    matPropsglob[3,0,0,1:zmax]=15
+    # front right 
+    matPropsglob[3,0,ymax,:]=16
+    # back left 
+    matPropsglob[3,xmax,0,:]=17
+    # back right 
+    matPropsglob[3,xmax,ymax,:]=18
     ## Corners
-    # bottom left front     matPropsglob[3,0,0,0]=19
-    # top left front     matPropsglob[3,0,0,zmax]=20
-    # bottom right front     matPropsglob[3,0,ymax,0]=21
-    # top right front     matPropsglob[3,0,ymax,zmax]=22
-    # bottom left back     matPropsglob[3,xmax,0,0]=23
-    # top left back     matPropsglob[3,xmax,0,zmax]=24
-    # bottom right back     matPropsglob[3,xmax,zmax,0]=25
-    # top right back     matPropsglob[3,xmax,ymax,zmax]=26
+    # bottom left front 
+    matPropsglob[3,0,0,0]=19
+    # top left front 
+    matPropsglob[3,0,0,zmax]=20
+    # bottom right front 
+    matPropsglob[3,0,ymax,0]=21
+    # top right front 
+    matPropsglob[3,0,ymax,zmax]=22
+    # bottom left back 
+    matPropsglob[3,xmax,0,0]=23
+    # top left back 
+    matPropsglob[3,xmax,0,zmax]=24
+    # bottom right back 
+    matPropsglob[3,xmax,zmax,0]=25
+    # top right back 
+    matPropsglob[3,xmax,ymax,zmax]=26
     
     return matPropsglob
 
