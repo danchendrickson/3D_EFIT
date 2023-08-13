@@ -45,7 +45,7 @@ height1 = 0.2 #0.1524
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = 'RfRLowerBCandAllEdgeCorners'
+runName = 'RfRlowerBCBodyFirstActuallyRunningFaces'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
@@ -255,7 +255,7 @@ def updateStress(x,y,z):
     except:
         pass
     try:
-        #FACES
+        #Body
         if matProps3[x,y,z] == 0: #middle of material
 
             ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
@@ -276,6 +276,16 @@ def updateStress(x,y,z):
             ds=shearyz*(vy[x,y,z+1]-vy[x,y,z]+vz[x,y+1,z]-vz[x,y,z])
             syz[x,y,z]=syz[x,y,z]+ds*ts
 
+        #outliers or testing
+        elif matProps3[x,y,z] == 99:
+            sxx[x,y,z]=0
+            syy[x,y,z]=0
+            szz[x,y,z]=0
+            sxy[x,y,z]=0
+            sxz[x,y,z]=0
+            syz[x,y,z]=0
+
+        #faces    
         elif matProps3[x,y,z] == 1 or matProps3[x,y,z] == 35: #bottom of material, z = 0
 
             ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z])
@@ -635,14 +645,6 @@ def updateStress(x,y,z):
             syz[x,y,z]=0
 
 
-        elif matProps3[x,y,z] == 99:
-            sxx[x,y,z]=0
-            syy[x,y,z]=0
-            szz[x,y,z]=0
-            sxy[x,y,z]=0
-            sxz[x,y,z]=0
-            syz[x,y,z]=0
-
         else: print('error:', str(x), str(y), str(z))
     except:
         print('Boundary Conditon isssue Stress: ', str(x), str(y), str(z), str(matProps3[x,y,z]))
@@ -653,7 +655,7 @@ def updateVelocity(x,y,z):
     try:
 
 
-        #FACES
+        #body
         if matProps3[x,y,z] == 0:
             dvxConst=2*(1/gs)*(1/(matProps0[x,y,z]+matProps0[x+1,y,z]))
             dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
@@ -668,6 +670,13 @@ def updateVelocity(x,y,z):
             vz[x,y,z]=vz[x,y,z]+dv*ts
 
 
+        #incase non boundaries or unknown areas snuck through
+        elif matProps3[x,y,z] == 99:
+            vx[x,y,z]=0
+            vy[x,y,z]=0
+            vz[x,y,z]=0
+
+        #faces    
         elif matProps3[x,y,z] == 1:
             dvxConst=2*(1/gs)*(1/(matProps0[x,y,z]+matProps0[x+1,y,z]))
             dv=dvxConst*(sxx[x+1,y,z]-sxx[x,y,z]+sxy[x,y,z]-sxy[x,y-1,z]+sxz[x,y,z]-sxz[x,y,z-1])
@@ -952,12 +961,6 @@ def updateVelocity(x,y,z):
             vz[x,y,z]=0
 
 
-        #incase non boundaries or unknown areas snuck through
-        elif matProps3[x,y,z] == 99:
-            vx[x,y,z]=0
-            vy[x,y,z]=0
-            vz[x,y,z]=0
-
         else: print('error: ',x,y,z, matProps3[x,y,z])
     except:
         print('Boundary Conditon isssue Velocity: ', str(x), str(y), str(z), str(matProps3[x,y,z]))
@@ -1027,47 +1030,27 @@ def setSimSpaceBC99(matPropsglob):
     #matPropsglob[3,xmax,1:ymax,1:zmax] = 6
 
     # edges
-    # front bottom 
-    matPropsglob[3,0,1:ymax,0]=7
-    # back bottom 
-    matPropsglob[3,xmax,:,0]=8
-    # bottom left 
-    matPropsglob[3,1:xmax,0,0]=9
-    # bottom right 
-    matPropsglob[3,:,ymax,0]=10
-    # front top 
-    matPropsglob[3,0,:,zmax]=11
-    # back top 
-    matPropsglob[3,xmax,:,zmax]=12
-    # top left 
-    matPropsglob[3,:,0,zmax]=13 
-    # top rigight 
-    matPropsglob[3,:,ymax,zmax]=14
-    # front left 
-    matPropsglob[3,0,0,1:zmax]=15
-    # front right 
-    matPropsglob[3,0,ymax,:]=16
-    # back left 
-    matPropsglob[3,xmax,0,:]=17
-    # back right 
-    matPropsglob[3,xmax,ymax,:]=18
+    # front bottom     matPropsglob[3,0,1:ymax,0]=7
+    # back bottom     matPropsglob[3,xmax,:,0]=8
+    # bottom left     matPropsglob[3,1:xmax,0,0]=9
+    # bottom right     matPropsglob[3,:,ymax,0]=10
+    # front top     matPropsglob[3,0,:,zmax]=11
+    # back top     matPropsglob[3,xmax,:,zmax]=12
+    # top left     matPropsglob[3,:,0,zmax]=13 
+    # top rigight     matPropsglob[3,:,ymax,zmax]=14
+    # front left     matPropsglob[3,0,0,1:zmax]=15
+    # front right     matPropsglob[3,0,ymax,:]=16
+    # back left     matPropsglob[3,xmax,0,:]=17
+    # back right     matPropsglob[3,xmax,ymax,:]=18
     ## Corners
-    # bottom left front 
-    matPropsglob[3,0,0,0]=19
-    # top left front 
-    matPropsglob[3,0,0,zmax]=20
-    # bottom right front 
-    matPropsglob[3,0,ymax,0]=21
-    # top right front 
-    matPropsglob[3,0,ymax,zmax]=22
-    # bottom left back 
-    matPropsglob[3,xmax,0,0]=23
-    # top left back 
-    matPropsglob[3,xmax,0,zmax]=24
-    # bottom right back 
-    matPropsglob[3,xmax,zmax,0]=25
-    # top right back 
-    matPropsglob[3,xmax,ymax,zmax]=26
+    # bottom left front     matPropsglob[3,0,0,0]=19
+    # top left front     matPropsglob[3,0,0,zmax]=20
+    # bottom right front     matPropsglob[3,0,ymax,0]=21
+    # top right front     matPropsglob[3,0,ymax,zmax]=22
+    # bottom left back     matPropsglob[3,xmax,0,0]=23
+    # top left back     matPropsglob[3,xmax,0,zmax]=24
+    # bottom right back     matPropsglob[3,xmax,zmax,0]=25
+    # top right back     matPropsglob[3,xmax,ymax,zmax]=26
     
     return matPropsglob
 
@@ -1573,6 +1556,18 @@ print(np.fliplr(signalLocation[0:25,gridStartHeadWidth,:]).T)
 
 # %%
 # asdfasdf
+MidMatrix = np.zeros((gl1,Tsteps))
+
+# %%
+inner = []
+outer=[]
+for x in range(gl1):
+    for y in range(gw1):
+        for z in range(gh1):
+            if matProps3[x,y,z] == 0:
+                inner.append([x,y,z])
+            else:
+                outer.append([x,y,z])
 
 # %%
 for t in range(Tsteps):
@@ -1584,19 +1579,13 @@ for t in range(Tsteps):
     if FFunction ==3:
         vx += signalloc * sinInputSignal[t]
 
-    for xx in range(npx-1):
-        x = xx+1
-        for yy in range(gw1-1):
-            y=yy+1
-            for zz in range(gh1-1):
-                z=zz+1
-                updateStress(x,y,z)
+    for pt in outer:
+        updateStress(pt[0],pt[1],pt[2])
     
-    for x in [0,npx-1]:
-        for y in [0,gw1-1]:
-            for z in [0,gh1-1]:
-                updateStress(x,y,z)
+    for pt in inner:
+        updateStress(pt[0],pt[1],pt[2])
     
+
 
     # cut boundaries off of arrays
     '''Remove for Jupyter single processor
@@ -1620,19 +1609,13 @@ for t in range(Tsteps):
     if FFunction == 1:
         szz -= signalloc * specificWheelLoad
 
-    for x in [0,npx-1]:
-        for y in [0,gw1-1]:
-            for z in [0,gh1-1]:
-                updateVelocity(x,y,z)
-    for xx in range(npx-1):
-        x = xx+1
-        for yy in range(gw1-1):
-            y=yy+1
-            for zz in range(gh1-1):
-                z=zz+1
-                updateVelocity(x,y,z)
+    for pt in outer:
+        updateVelocity(pt[0],pt[1],pt[2])
+    
+    for pt in inner:
+        updateVelocity(pt[0],pt[1],pt[2])
 
-
+    MidMatrix[:,t] = vx[:,MSignalLocY,MSignalLocZ]
     '''Remove for Jupyter single processor
     # cut boundaries off of arrays
     vxt=vx[1:npx+1,:,:]
@@ -1760,9 +1743,9 @@ if (myid == 0) :
 
     plt.clf()
     plt.title('Middle XY Plane Quarter into Rod')
-    plt.plot(Times,vxDisplacement,label='x', linewidth=3)
-    plt.plot(Times,vyDisplacement,label='y', linewidth=6)
-    plt.plot(Times,vzDisplacement,label='z', linewidth=3)
+    plt.plot(Times,vxDisplacement,label='x', linewidth=2)
+    plt.plot(Times,vyDisplacement,label='y', linewidth=4)
+    plt.plot(Times,vzDisplacement,label='z', linewidth=2)
     plt.legend()
     plt.savefig(imFolder+runName+'DisplaceFront.png')
     plt.show()
@@ -1852,7 +1835,7 @@ if (myid == 0) :
 
     #Data = [MSignal,USignal,DSignal,LSignal,RSignal,FSignal,BSignal]
     print(np.shape(MSignal), np.shape(np.asarray(MSignal)))
- 
+
 
 #    if (myid == 0 ):
 #        print(t,'/',Tsteps-1,'checksums vx, sxx:',ckvs,ckss, time.time()-stime)
@@ -1876,22 +1859,22 @@ if (myid == signalLocxid) :
 '''
 
 # %%
-vxDisplacement = [0]
-vyDisplacement = [0]
-vzDisplacement = [0]
+Displacement = np.zeros(np.shape(MSignal))
 
-for i in range(len(MSignal)):
-        vxDisplacement.append(vxDisplacement[i-1]+MSignal[i][0] * ts)
-        vyDisplacement.append(vyDisplacement[i-1]+MSignal[i][1] * ts)
-        vzDisplacement.append(vzDisplacement[i-1]+MSignal[i][2] * ts)
+for i in range(np.shape(MSignal)[1]):
+    for j in range(np.shape(MSignal)[0]):
+        if j == 0:
+            Displacement[j,i]=MSignal[j,i]*ts
+        else:
+            Displacement[j,i]=Displacement[j-1,i]+MSignal[j,i]*ts
     
 fig = plt.figure(dpi=600)
 endnode=300
 plt.clf()
 plt.title('Middle Node')
-plt.plot(Times[:endnode],vxDisplacement[:endnode],label='x', linewidth = 3)
-plt.plot(Times[:endnode],vyDisplacement[:endnode],label='y', linewidth = 6)
-plt.plot(Times[:endnode],vzDisplacement[:endnode],label='z', linewidth = 3)
+plt.plot(Times[:endnode],Displacement[:endnode,0],label='x', linewidth = 3)
+plt.plot(Times[:endnode],Displacement[:endnode,1],label='y', linewidth = 6)
+plt.plot(Times[:endnode],Displacement[:endnode,2],label='z', linewidth = 3)
 plt.legend()
 plt.savefig(imFolder+runName+'DisplaceMid2.png')
 plt.show()
@@ -1901,7 +1884,39 @@ h = vyDisplacement-vzDisplacement
 print(h)
 
 # %%
-Cases = ['PlaneWave']    #'SideRub','TopHit', 'Cube', 'CubeS'
-Views = ['Mid', 'Vert','Head','zplane25','zplane75']
+np.shape(MidMatrix)
+
+# %%
+MidDisplace = np.zeros(np.shape(MidMatrix))
+
+# %%
+for i in range(np.shape(MidMatrix)[0]):
+    for j in range(np.shape(MidMatrix)[1]):
+        if j == 0:
+            MidDisplace[i,j]=MidMatrix[i,j]*ts
+        else:
+            MidDisplace[i,j]=MidDisplace[i,j-1]+MidMatrix[i,j]*ts
+
+# %%
+fig = plt.figure(dpi=600, figsize=(6,4))
+
+for i in range(8):
+    plt.plot(MidMatrix[i*20,:],label=str(i*20))
+plt.legend()
+plt.show()
+
+
+# %%
+fig = plt.figure(dpi=600, figsize=(6,4))
+
+for i in range(8):
+    plt.plot(MidDisplace[i*20,:],label=str(i*20))
+plt.legend()
+plt.show()
+
+
+# %%
+np.savetxt(runName+"-MidLineDisplacement.csv",MidDisplace,delimiter=",")
+np.savetxt(runName+"-MidLineVelocity.csv",MidMatrix,delimiter=",")
 
 
