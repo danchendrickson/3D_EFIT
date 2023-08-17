@@ -1,0 +1,54 @@
+#F90FLAGS = -O2 -Munroll=c:1 -Mlre -mcmodel=medium -tp k8-64e   &
+    &   -I${SILO_HOME}/include
+F90FLAGS = -fast -I${SILO_HOME}/include
+FC      = mpif90                #compiler
+LDFLAGS = -L${SILO_HOME}/lib -lsilo
+LIBS = -lnsl -lm -ldl
+
+OBJS    = exchange.o get_input_structure.o code9242008.o    &
+    &   map_transducer.o map_region.o dfunction.o decomp1d.o    &
+    &   plot_signal.o update_flaw.o update_section.o update_Tsec.o  &
+    &   update_mass.o
+
+
+efitcode:         ${OBJS}
+	${FC} ${F90FLAGS} -o  $@ ${OBJS} ${LDFLAGS} ${LIBS}
+
+exchange.o:    exchange.f90
+	${FC} ${F90FLAGS} -c $?
+
+get_input_structure.o:  get_input_structure.f90
+	${FC} ${F90FLAGS} -c $?
+
+dfunction.o:  	dfunction.f90
+	${FC} ${F90FLAGS} -c $?
+
+plot_signal.o:  plot_signal.f90
+	${FC} ${F90FLAGS} -c $?
+
+decomp1d.o:  decomp1d.f90
+	${FC} ${F90FLAGS} -c $?
+
+map_transducer.o:  map_transducer.f90
+	${FC} ${F90FLAGS} -c $?
+
+map_region.o:	map_region.f90
+	${FC} ${F90FLAGS} -c $?
+
+update_flaw.o:  update_flaw.f90
+	${FC} ${F90FLAGS} -c $?
+
+update_section.o:  update_section.f90
+	${FC} ${F90FLAGS} -c $?
+
+update_Tsec.o:  update_Tsec.f90
+	${FC} ${F90FLAGS} -c $?
+
+update_mass.o:  update_mass.f90
+	${FC} ${F90FLAGS} -c $?
+
+code9242008.o:  code9242008.f90
+	${FC} ${F90FLAGS} -c $?
+
+clean:
+	-rm -f *.o core efitcode a.out

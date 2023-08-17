@@ -1,0 +1,13 @@
+0.0         ! tfyStart - Region 1 start (meters) (y-dir), Double Precision
+0.058       ! tfyEnd - Refion 1 end (meters) (y-dir), Double Precision
+0.0         ! tfzStart - Region 1 start (meters) (z-dir), Double Precision
+0.0016        ! tfzEnd - Refion 1 end (meters) (z-dir), Double Precision
+0.028       ! twyStart - Region 1 start (meters) (y-dir), Double Precision
+0.030       ! twyEnd - Refion 1 end (meters) (y-dir), Double Precision
+0.0016       ! twzStart - Region 1 start (meters) (z-dir), Double Precision
+0.03       ! twzEnd - Refion 1 end (meters) (z-dir), Double Precision
+0.024       ! ttyStart - Region 1 start (meters) (y-dir), Double Precision
+0.034       ! ttyEnd - Refion 1 end (meters) (y-dir), Double Precision
+0.03       ! ttzStart - Region 1 start (meters) (z-dir), Double Precision
+0.035       ! ttzEnd - Refion 1 end (meters) (z-dir), Double Precision
+2700.0      ! tden - Density of Region 1 (kg/m^3), Double Precision

@@ -1,0 +1,72 @@
+#!/bin/csh
+#
+#  Submits a PBS/TORQUE job that runs from a unique directory within QFS.
+#  Walltime limit and nodespec are passed as argument from the command line
+#  e.g.,
+#
+#  ./run_efit 2:00:00 25:typhoon:ppn=4
+#
+
+set Usage="Usage: $0 HH:MM:SS nodespec"
+
+if ($# != 2) then
+   echo $Usage
+   exit 1
+endif
+
+#
+# Create a unique output directory name using the current date and time.
+#
+# Caveat: Timestamp resolution is one second -- be careful if running 
+#         this from automated submission scripts.
+#
+# Two formats to choose from: pick your favorite.
+#
+#set TIMESTAMP=`/bin/date +'%Y%m%d%H%M%S'` 
+set TIMESTAMP=`/bin/date +'%Y-%m-%d_%H:%M:%S'`
+ 
+set INDIR=$HOME/efit3d/new/Tflaw
+set OUTDIR=/sciclone/tmp10/jxbing/layer/new/$TIMESTAMP
+#set OUTDIR=/sciclone/qfs00/jxbing/Output/now/$TIMESTAMP
+set EXECFILE=$INDIR/efitcode
+set RESULTS=$OUTDIR/results
+
+if (! -e $OUTDIR ) mkdir -p $OUTDIR
+if (! -e $RESULTS ) mkdir -p $RESULTS
+
+# Make a working copy of the input files and executable
+cp -p $INDIR/*_parameters $INDIR/region_* $INDIR/surf_* $OUTDIR
+cp -p $EXECFILE $OUTDIR
+
+qsub -N Efit_code -l walltime=$1 -l nodes=$2 <<EOF
+#!/bin/csh
+
+module list
+
+set JOBID=\`basename \$PBS_JOBID .\$PBS_DEFAULT\`
+echo "PBS will run job on host \$PBS_O_HOST"
+echo "PBS will run job on nodes \`cat \$PBS_NODEFILE\`"
+echo "PBS job is interactive or batch: \$PBS_ENVIRONMENT"
+echo "PBS job id is \$PBS_JOBID"
+
+# Set up files and directories
+set OUTFILE=\${JOBID}.run.dat
+
+echo OUTDIR is $OUTDIR
+echo RESULTS is $RESULTS
+
+# Run job from OUTDIR
+cd $OUTDIR
+
+# OK, let's do some work.
+pbsmvp2 ./efitcode >\$OUTFILE
+
+# Clean up input files and executable
+rm ./*_parameters ./region_* ./surf_* ./efitcode 
+
+cd ..
+chown -R jxbing $OUTDIR
+
+EOF
+
+exit
