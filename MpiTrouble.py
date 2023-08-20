@@ -11,7 +11,7 @@ import math
 import time
 import functools
 
-from distBox import distBox
+#from distBox import distBox
 
 import sys
 from mpi4py import MPI
@@ -25,14 +25,13 @@ mpi_comm = MPI.COMM_WORLD
 myid = mpi_comm.Get_rank()                                                         
 mpi_size = mpi_comm.Get_size()        
 nprocs=mpi_size
+#myid = 0
 
-'''
 # for overlapping slabs:  
 # # points per proc along z = npz = gh1/nproc (+2 to ghost boundaries)
-# glob_index = loc_index-1 + npz*myid
-# loc_index = glob_index - npz*myid + 1
-# myid given glob_index = glob_index/npz = ghloc-2
-'''
+glob_index = loc_index-1 + npz*myid
+loc_index = glob_index - npz*myid + 1
+#myid given glob_index = glob_index/npz = ghloc-2
 
 # set Constants
 AirCut = False
@@ -46,7 +45,7 @@ height1 = 0.2 #0.1524
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = 'InOutJBVelOrthogVBC0'
+runName = 'MpiRetest1'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
@@ -57,7 +56,7 @@ frequency = 2000
 
 
 #Run for 4 Cycles:
-runtime = 4 / frequency 
+runtime = 7 / frequency 
 
 #Forcing Function Location and type
 # 1 for dropped wheel on top
@@ -716,83 +715,6 @@ def updateStress(x,y,z):
         print('Boundary Conditon isssue Stress: ', str(x), str(y), str(z), str(matProps3[x,y,z]))
 
 # %%
-
-# %%
-def JBUV(x,y,z):
-    
-    #Vx Cases
-    #x in middle
-    try:
-        if matProps3[x,y,z] in [0,1,2,3,4,9,10,13,14]:
-            dvxConst=2*(1/gs)*(1/(matProps0[x,y,z]+matProps0[x+1,y,z]))
-            dv=dvxConst*( sxx[x+1,y,z]-sxx[x,y,z]
-                         +sxy[x,y,z]-sxy[x,y-1,z]
-                         +sxz[x,y,z]-sxz[x,y,z-1])
-            vx[x,y,z]=vx[x,y,z]+dv*ts
-        #x at 0
-        elif matProps3[x,y,z] in [5,7,11,15,16,19,20,21,22]:
-            vx[x,y,z] += 2* ((sxx[x+1,y,z])/(matProps0[x,y,z] * gs)) * ts
-        # x at xmax
-        elif matProps3[x,y,z] in [6,8,12,17,18,23,24,25,26]:
-            vx[x,y,z] -= 2 * ((sxx[x,y,z])/(matProps0[x,y,z] * gs))*ts
-        #outside sim space
-        elif matProps3[x,y,z]  in [99]:
-            vx[x,y,z] = 0
-        #error handling
-        else:
-            print('Unrecognized BC x', matProps3[x,y,z],x,y,z)
-    except:
-        vx[x,y,z] = 0
-    
-    #Vy cases
-    try:
-        #y in middle
-        if matProps3[x,y,z] in [0,1,2,5,6,7,8,11,12]:
-            dvyConst=2*(1/gs)*(1/(matProps0[x,y,z]+matProps0[x,y+1,z]))
-            dv=dvyConst* ( sxy[x,y,z]-sxy[x-1,y,z]
-                          +syy[x,y+1,z]-syy[x,y,z]
-                          +syz[x,y,z]-syz[x,y,z-1])
-            vy[x,y,z]=vy[x,y,z]+dv*ts
-        #y = 0
-        elif matProps3[x,y,z] in [3,9,13,15,17,19,20,23,24]:
-            vy[x,y,z] += 2* ((syy[x,y+1,z])/(matProps0[x,y,z] * gs)) * ts
-        #y = ymax
-        elif matProps3[x,y,z] in [4,10,14,16,18,21,22,25,26]:
-            vy[x,y,z] -= 2 * ((syy[x,y,z])/(matProps0[x,y,z] * gs))*ts
-        #outside of sim space
-        elif matProps3[x,y,z]  in [99]:
-            vy[x,y,z] = 0
-        #error handling
-        else:
-            print('Unrecognized BC y', matProps3[x,y,z],x,y,z)
-    except:
-        vy[x,y,z] = 0
-
-    #Vz cases
-    try:
-        #z in the middle
-        if matProps3[x,y,z] in [0,3,4,5,6,15,16,17,18]:
-            dvzConst=2*(1/gs)*(1/(matProps0[x,y,z]+matProps0[x,y,z+1]))
-            dv=dvzConst*( sxz[x,y,z]-sxz[x-1,y,z]
-                         +syz[x,y,z]-syz[x,y-1,z]
-                         +szz[x,y,z+1]-szz[x,y,z])
-            vz[x,y,z]=vz[x,y,z]+dv*ts
-        #z at 0
-        elif matProps3[x,y,z] in [1,7,8,9,10,19,21,23,25]:
-            vz[x,y,z] += 2* ((szz[x,y,z+1])/(matProps0[x,y,z] * gs)) * ts
-        #z at zmax
-        elif matProps3[x,y,z] in [2,11,12,13,14,20,22,24,26]:
-            vz[x,y,z] -= 2 * ((szz[x,y,z])/(matProps0[x,y,z] * gs))*ts
-        #outside sim space
-        elif matProps3[x,y,z] in [99]:
-            vz[x,y,z] = 0
-        #error handling
-        else:
-            print('Unrecognized BC z', matProps3[x,y,z],x,y,z)
-    except:
-        vz[x,y,z] = 0
-
-
 # %%
 def updateVelocity(x,y,z):
     try:
@@ -814,7 +736,7 @@ def updateVelocity(x,y,z):
 
 
         #incase non boundaries or unknown areas snuck through
-        elif (matProps3[x,y,z] == 99 or matProps3[x,y,z] == 2 or matProps3[x,y,z] == 4 or matProps3[x,y,z] == 6):
+        elif (matProps3[x,y,z] == 99): # or matProps3[x,y,z] == 2 or matProps3[x,y,z] == 4 or matProps3[x,y,z] == 6):
             vx[x,y,z]=0
             vy[x,y,z]=0
             vz[x,y,z]=0
@@ -1514,7 +1436,7 @@ vzSignal=np.zeros(Tsteps)
 ### ADD map function for this
 #SAME AS INPUTZ?
 
-FSignalLocX=int(gl1/4)
+'''FSignalLocX=int(gl1/4)
 BSignalLocX=int(3*gl1/4)
 USignalLocX=int(gl1/4)
 DSignalLocX=int(gl1/4)
@@ -1537,16 +1459,18 @@ DSignalLocZ=int(gh1/4)
 RSignalLocZ=int(gh1/2)
 LSignalLocZ=int(gh1/2)
 MSignalLocZ=int(gh1/2)
-
-
+'''
+MSignalLocX=int(gl1/4)
+MSignalLocY=int(gw1/2)
+MSignalLocZ=int(gh1/2)
 #signal locations going to be a quarter of the way in the middle from the 
 # Front, Back, Up side, Down side, Right, Left, and Middle Middle Middle
-FSignal=np.zeros((Tsteps,3))
+'''FSignal=np.zeros((Tsteps,3))
 BSignal=np.zeros((Tsteps,3))
 USignal=np.zeros((Tsteps,3))
 DSignal=np.zeros((Tsteps,3))
 RSignal=np.zeros((Tsteps,3))
-LSignal=np.zeros((Tsteps,3))
+LSignal=np.zeros((Tsteps,3))'''
 MSignal=np.zeros((Tsteps,3))
 
 # %%
@@ -1555,8 +1479,6 @@ MSignal=np.zeros((Tsteps,3))
 # v's and s's are zero to start + source applied later 
 # in single proc's array
 
-#turn off for single processor
-#'''
 if myid == 0:
     split=np.zeros(nprocs)
     split[:]=gw1*gh1*npx
@@ -1570,7 +1492,7 @@ else:
 
 split=mpi_comm.bcast(split)
 offset=mpi_comm.bcast(offset)
-#'''
+
 
 matProps0 = np.zeros((npx,gw1,gh1))
 matProps1 = np.zeros((npx,gw1,gh1))
@@ -1578,8 +1500,7 @@ matProps2 = np.zeros((npx,gw1,gh1))
 matProps3 = np.zeros((npx,gw1,gh1))
 signalloc = np.zeros((npx,gw1,gh1))
 
-#turn off for single processor
-#'''
+
 mpi_comm.Scatterv([matPropsglob[0,:,:,:],split,offset,MPI.DOUBLE], matProps0)
 mpi_comm.Scatterv([matPropsglob[1,:,:,:],split,offset,MPI.DOUBLE], matProps1)
 mpi_comm.Scatterv([matPropsglob[2,:,:,:],split,offset,MPI.DOUBLE], matProps2)
@@ -1592,15 +1513,14 @@ matProps1=distBox(matProps1,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)
 matProps2=distBox(matProps2,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 matProps3=distBox(matProps3,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 signalloc=distBox(signalloc,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
-#'''
 
-# turn on for single processor
-'''matProps0=matPropsglob[0,:,:,:]
+
+matProps0=matPropsglob[0,:,:,:]
 matProps1=matPropsglob[1,:,:,:]
 matProps2=matPropsglob[2,:,:,:]
 matProps3=matPropsglob[3,:,:,:]
 signalloc=signalLocation[:,:,:]
-'''
+
 
 #Now slab has local versions with ghosts of matProps
 if (myid == 0) :
@@ -1613,65 +1533,25 @@ stime = time.time()
 if (myid == 0 ):
     print('subs setup, line 1213.  About to start at ' + str(stime))
     
-'''
-# %%
-fig = plt.figure(figsize=(4,4))
-plt.pcolormesh(matProps0[0,:,:].T)
-plt.show()
-
 
 # %%
-np.set_printoptions(linewidth=128)
+if (myid == 0 ):
+    print(np.fliplr(matProps3[xmax-1,:,:]).T)
 
 
 # %%
-print(np.fliplr(matProps3[xmax-1,:,:]).T)
-
-
-# %%
-#asdfadsf
-
-
-# %%
-fig, ax = plt.subplots()
-
-im = ax.imshow(matProps3[0,:,:])
-
-def init():
-    im.set_data(matProps3[0,:,:])
-    return (im,)
-
-# animation function. This is called sequentially
-def animate(i):
-    data_slice = matProps3[i,:,:].T
-    im.set_data(data_slice)
-    return (im,)
-
-# call the animator. blit=True means only re-draw the parts that have changed.
-anim = animation.FuncAnimation(fig, animate, init_func=init,
-                               frames=100, interval=20, blit=True) 
-anim.save('Rail.BCs.gif', writer='imagemagick', fps=30)
-
-
-# %%
-fig = plt.figure(figsize=(15,5))
-#plt.pcolormesh(matPropsglob[3,:,1,:].T)
-plt.pcolormesh(signalloc[:,gridStartHeadWidth+1,:].T)
-plt.show()
-
-# %%
-print(np.fliplr(signalLocation[0:25,gridStartHeadWidth,:]).T)
-'''
-
+if (myid == 0 ):
+    print(np.fliplr(signalLocation[0:25,gridStartHeadWidth,:]).T)
 
 # %%
 # asdfasdf
-MidMatrix = np.zeros((gl1,Tsteps))
+if (myid == 0 ):
+    MidMatrix = np.zeros((gl1,Tsteps))
 
 # %%
 inner = []
 outer=[]
-for x in range(1,npx+1):
+for x in range(npx):
     for y in range(gw1):
         for z in range(gh1):
             if matProps3[x,y,z] == 0:
@@ -1683,11 +1563,11 @@ for x in range(1,npx+1):
 for t in range(Tsteps):
      
     if FFunction == 2:
-        vz += signalloc[0:npx,:,:] * sinInputSignal[t]
+        vz += signalloc * sinInputSignal[t]
         print(np.sum(vz))
     
     if FFunction ==3:
-        vx += signalloc[0:npx,:,:] * sinInputSignal[t]
+        vx += signalloc * sinInputSignal[t]
 
     for pt in inner:
         updateStress(pt[0],pt[1],pt[2])
@@ -1697,15 +1577,16 @@ for t in range(Tsteps):
     
 
 
-    # cut boundaries off of arrays
     #Remove for Jupyter single processor
-    sxxt=sxx[1:npx,:,:]
-    syyt=syy[1:npx,:,:]
-    szzt=szz[1:npx,:,:]
-    sxyt=sxy[1:npx,:,:]
-    sxzt=sxz[1:npx,:,:]
-    syzt=syz[1:npx,:,:]
+    # cut boundaries off of arrays
+    sxxt=sxx[1:npx+1,:,:]
+    syyt=syy[1:npx+1,:,:]
+    szzt=szz[1:npx+1,:,:]
+    sxyt=sxy[1:npx+1,:,:]
+    sxzt=sxz[1:npx+1,:,:]
+    syzt=syz[1:npx+1,:,:]
 
+    #Remove for Jupyter single processor
     # redistrubute ghost/boundary values
     sxx=distBox(sxxt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     syy=distBox(syyt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
@@ -1713,11 +1594,11 @@ for t in range(Tsteps):
     sxy=distBox(sxyt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     sxz=distBox(sxzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     syz=distBox(syzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
-    #'''
+    
     
     #if the forcing function is a stress
     if FFunction == 1:
-        szz -= signalloc[0:npx,:,:] * specificWheelLoad
+        szz -= signalloc * specificWheelLoad
 
     for pt in inner:
         updateVelocity(pt[0],pt[1],pt[2])
@@ -1725,8 +1606,9 @@ for t in range(Tsteps):
     for pt in outer:
         updateVelocity(pt[0],pt[1],pt[2])
 
+    
+    
     #Remove for Jupyter single processor
-    #'''
     # cut boundaries off of arrays
     vxt=vx[1:npx+1,:,:]
     vyt=vy[1:npx+1,:,:]
@@ -1736,34 +1618,44 @@ for t in range(Tsteps):
     vx=distBox(vxt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     vy=distBox(vyt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     vz=distBox(vzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
-    #'''
-    
-    
+
     #record signals
     if (myid==signalLocxid) :
         vxSignal[t]=vx[signalLocxlocx,signalLocy,signalLocz]
         vySignal[t]=vy[signalLocxlocx,signalLocy,signalLocz]
         vzSignal[t]=vz[signalLocxlocx,signalLocy,signalLocz]
     
-    vxg=vx[1:npx+1,:,:]        
+    '''vxg=[1:npx+1,:,:]        
     mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
-    vyg=vy[1:npx+1,:,:]        
+    vyg=[1:npx+1,:,:]        
     mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])
-    vzg=vz[1:npx+1,:,:]        
-    mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
+    vzg=[1:npx+1,:,:]        
+    mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])'''
 
     
     if (myid == 0 ) :
-        MidMatrix[:,t] = vxg[:,MSignalLocY,MSignalLocZ]
-        USignal[t]=[vxg[USignalLocX,USignalLocY,USignalLocZ],vyg[USignalLocX,USignalLocY,USignalLocZ],vzg[USignalLocX,USignalLocY,USignalLocZ]]
-        DSignal[t]=[vxg[DSignalLocX,DSignalLocY,DSignalLocZ],vyg[DSignalLocX,DSignalLocY,DSignalLocZ],vzg[DSignalLocX,DSignalLocY,DSignalLocZ]]
-        RSignal[t]=[vxg[RSignalLocX,RSignalLocY,RSignalLocZ],vyg[RSignalLocX,RSignalLocY,RSignalLocZ],vzg[RSignalLocX,RSignalLocY,RSignalLocZ]]
-        LSignal[t]=[vxg[LSignalLocX,LSignalLocY,LSignalLocZ],vyg[LSignalLocX,LSignalLocY,LSignalLocZ],vzg[LSignalLocX,LSignalLocY,LSignalLocZ]]
-        MSignal[t]=[vxg[MSignalLocX,MSignalLocY,MSignalLocZ],vyg[MSignalLocX,MSignalLocY,MSignalLocZ],vzg[MSignalLocX,MSignalLocY,MSignalLocZ]]
-        FSignal[t]=[vxg[FSignalLocX,FSignalLocY,FSignalLocZ],vyg[FSignalLocX,FSignalLocY,FSignalLocZ],vzg[FSignalLocX,FSignalLocY,FSignalLocZ]]
-        BSignal[t]=[vxg[BSignalLocX,BSignalLocY,BSignalLocZ],vyg[BSignalLocX,BSignalLocY,BSignalLocZ],vzg[BSignalLocX,BSignalLocY,BSignalLocZ]]
+        vxg = np.zeros((gl1,gw1,gh1))
+        vzg = np.zeros((gl1,gw1,gh1))
+        vyg = np.zeros((gl1,gw1,gh1))
 
-        if t%10==0:
+    
+        vxt=vx[1:npx+1,:,:]        
+        mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
+        vzt=vz[1:npx+1,:,:]        
+        mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
+        vyt=vy[1:npx+1,:,:]        
+        mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])
+        
+        #USignal[t]=[vxg[USignalLocX,USignalLocY,USignalLocZ],vyg[USignalLocX,USignalLocY,USignalLocZ],vzg[USignalLocX,USignalLocY,USignalLocZ]]
+        #DSignal[t]=[vxg[DSignalLocX,DSignalLocY,DSignalLocZ],vyg[DSignalLocX,DSignalLocY,DSignalLocZ],vzg[DSignalLocX,DSignalLocY,DSignalLocZ]]
+        #RSignal[t]=[vxg[RSignalLocX,RSignalLocY,RSignalLocZ],vyg[RSignalLocX,RSignalLocY,RSignalLocZ],vzg[RSignalLocX,RSignalLocY,RSignalLocZ]]
+        #LSignal[t]=[vxg[LSignalLocX,LSignalLocY,LSignalLocZ],vyg[LSignalLocX,LSignalLocY,LSignalLocZ],vzg[LSignalLocX,LSignalLocY,LSignalLocZ]]
+        MSignal[t]=[vxg[MSignalLocX,MSignalLocY,MSignalLocZ],vyg[MSignalLocX,MSignalLocY,MSignalLocZ],vzg[MSignalLocX,MSignalLocY,MSignalLocZ]]
+        #FSignal[t]=[vxg[FSignalLocX,FSignalLocY,FSignalLocZ],vyg[FSignalLocX,FSignalLocY,FSignalLocZ],vzg[FSignalLocX,FSignalLocY,FSignalLocZ]]
+        #BSignal[t]=[vxg[BSignalLocX,BSignalLocY,BSignalLocZ],vyg[BSignalLocX,BSignalLocY,BSignalLocZ],vzg[BSignalLocX,BSignalLocY,BSignalLocZ]]
+        MidMatrix[:,t] = vxg[:,MSignalLocY,MSignalLocZ]
+
+        '''if t%10==0:
         
             fig=plt.figure()
             plt.contourf(np.transpose(vxg[:,:,int(gh1/2)]), cmap='seismic')
@@ -1794,6 +1686,7 @@ for t in range(Tsteps):
             plt.savefig(imFolder+'zplane75/vy75Shear'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)
+        '''
             
 
     # Collect vx, sxx checksum contributions for printing
@@ -1814,7 +1707,7 @@ for t in range(Tsteps):
 
 # %%
 if (myid == 0) :
-    fig=plt.figure(figsize=(8,5), dpi=figDPI)
+    '''fig=plt.figure(figsize=(8,5), dpi=figDPI)
     plt.plot(MSignal[:,0])
     plt.savefig(imFolder+'vxsignalCA.png')
     plt.clf()
@@ -1845,16 +1738,18 @@ if (myid == 0) :
     plt.savefig(imFolder+runName+'DisplaceMid.png')
     #plt.show()
     
+    '''
     vxDisplacement = [0]
     vyDisplacement = [0]
     vzDisplacement = [0]
     
     for i in range(len(FSignal)):
-        vxDisplacement.append(vxDisplacement[i-1]+FSignal[i][0] * ts)
-        vyDisplacement.append(vyDisplacement[i-1]+FSignal[i][1] * ts)
-        vzDisplacement.append(vzDisplacement[i-1]+FSignal[i][2] * ts)
+        vxDisplacement.append(vxDisplacement[i-1]+MSignal[i][0] * ts)
+        vyDisplacement.append(vyDisplacement[i-1]+MSignal[i][1] * ts)
+        vzDisplacement.append(vzDisplacement[i-1]+MSignal[i][2] * ts)
 
     plt.clf()
+    
     plt.title('Middle XY Plane Quarter into Rod')
     plt.plot(Times,vxDisplacement,label='x', linewidth=2)
     plt.plot(Times,vyDisplacement,label='y', linewidth=4)
@@ -1862,7 +1757,7 @@ if (myid == 0) :
     plt.legend()
     plt.savefig(imFolder+runName+'DisplaceFront.png')
     plt.show()
-    
+    '''
     vxDisplacement = [0]
     vyDisplacement = [0]
     vzDisplacement = [0]
@@ -1944,34 +1839,35 @@ if (myid == 0) :
     plt.plot(Times,vzDisplacement)
     plt.savefig(imFolder+runName+'DisplaceDown.png')
      
-   
+   '''
 
     #Data = [MSignal,USignal,DSignal,LSignal,RSignal,FSignal,BSignal]
     print(np.shape(MSignal), np.shape(np.asarray(MSignal)))
 
 
-    #    if (myid == 0 ):
-    #        print(t,'/',Tsteps-1,'checksums vx, sxx:',ckvs,ckss, time.time()-stime)
-    #    sys.stdout.flush()
+#    if (myid == 0 ):
+#        print(t,'/',Tsteps-1,'checksums vx, sxx:',ckvs,ckss, time.time()-stime)
+#    sys.stdout.flush()
 
-    '''
-    if (myid == signalLocxid) :
-        plt.clf()
-        plt.plot(vxSignal)
-        plt.savefig('vxsignal.png')
+'''
+if (myid == signalLocxid) :
+    plt.clf()
+    plt.plot(vxSignal)
+    plt.savefig('vxsignal.png')
 
-    if (myid == signalLocxid) :
-        plt.clf()
-        plt.plot(vySignal)
-        plt.savefig('vysignal.png')
+if (myid == signalLocxid) :
+    plt.clf()
+    plt.plot(vySignal)
+    plt.savefig('vysignal.png')
 
-    if (myid == signalLocxid) :
-        plt.clf()
-        plt.plot(vzSignal)
-        plt.savefig('vzsignal.png')
-    '''
+if (myid == signalLocxid) :
+    plt.clf()
+    plt.plot(vzSignal)
+    plt.savefig('vzsignal.png')
+'''
 
-    # %%
+# %%
+if (myid == 0 ):
     Displacement = np.zeros(np.shape(MSignal))
 
     for i in range(np.shape(MSignal)[1]):

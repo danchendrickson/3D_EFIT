@@ -1,5 +1,5 @@
 #!/bin/tcsh
-#PBS -N RfRLowerBCandAllEdgeCorners
+#PBS -N FixVelGraph
 #PBS -l nodes=1:hima:ppn=64
 #PBS -l walltime=72:00:00
 #PBS -j oe
@@ -7,5 +7,5 @@
 
 cd $PBS_O_WORKDIR
 
-setenv OMP_NUM_THREADS 32
-/sciclone/home/dchendrickson01/.conda/envs/mpi/bin/python ~/Code/3D_EFIT/TroubleEFIT.py >& Trouble-RfRLowerBCandAllEdgeCorners.out
+#setenv OMP_NUM_THREADS 32
+/sciclone/home/dchendrickson01/.conda/envs/mpi/bin/python ~/Code/3D_EFIT/MPI-Trouble.py >& MPI-FixVelGraph.out
