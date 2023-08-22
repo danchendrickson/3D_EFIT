@@ -28,7 +28,7 @@ AirCut = False
 RailShape = False
 
 #Dimmesnsion of simulation space in meters
-length1 = 5
+length1 = 10
 width1 = 0.2
 height1 = 0.2
 
@@ -41,8 +41,10 @@ Ties = 0
 
 #Choose ferquency to be used for excitment
 #frequency = 64000
-#frequency = 16300
-frequency = 8000
+frequency = 16300
+#frequency = 8000
+
+figDPI = 600
 
 #Run for 4 Cycles:
 runtime = 12 / frequency 
@@ -80,7 +82,7 @@ if FFunction == 1:
 elif FFunction == 2:
     imFolder += 'SideRub/'
 elif FFunction == 3:
-    imFolder += 'CubeS/'
+    imFolder += 'Test/'
 
 '''
 #MATERIAL 2  (made up)
@@ -194,7 +196,7 @@ elif FFunction == 2:
     ## Find the share of the force per node for FF1
 
 elif FFunction == 3:
-    signalLocation[:3,:,:] = 1
+    signalLocation[2:4,:,:] = 1
 
 
 if myid == 0:
@@ -202,6 +204,39 @@ if myid == 0:
 
 #########
 # FUnctions
+def JBSU(x,y,z):
+    if matProps3[x,y,z] in [0,2,4,6]:
+        norm1=(1/gs)*(matProps1[x,y,z]+2*matProps2[x,y,z])
+        norm2=(1/gs)*(matProps1[x,y,z])
+
+        ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
+        sxx[x,y,z]=sxx[x,y,z]+ds*ts
+
+        ds=norm1*(vy[x,y,z]-vy[x,y-1,z])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vz[x,y,z]-vz[x,y,z-1])
+        syy[x,y,z]=syy[x,y,z]+ds*ts
+
+        ds=norm1*(vz[x,y,z]-vz[x,y,z-1])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vy[x,y,z]-vy[x,y-1,z])
+        szz[x,y,z]=szz[x,y,z]+ds*ts
+    
+    if matProps3[x,y,z] in [0,5]:
+        shearDenomxy=(1/matProps2[x,y,z])+(1/matProps2[x+1,y,z])+(1/matProps2[x,y+1,z])+(1/matProps2[x+1,y+1,z])
+        shearxy=4*(1/gs)*(1/shearDenomxy)
+        ds=shearxy*(vx[x,y+1,z]-vx[x,y,z]+vy[x+1,y,z]-vy[x,y,z])
+        sxy[x,y,z]=sxy[x,y,z]+ds*ts
+
+    if matProps3[x,y,z] in [0,3]:
+        shearDenomxz=(1/matProps2[x,y,z])+(1/matProps2[x+1,y,z])+(1/matProps2[x,y,z+1])+(1/matProps2[x+1,y,z+1])
+        shearxz=4*(1/gs)*(1/shearDenomxz)
+        ds=shearxz*(vx[x,y,z+1]-vx[x,y,z]+vz[x+1,y,z]-vz[x,y,z])
+        sxz[x,y,z]=sxz[x,y,z]+ds*ts   
+
+    if matProps3[x,y,z] in [0,1]:
+        shearDenomyz=(1/matProps2[x,y,z])+(1/matProps2[x,y+1,z])+(1/matProps2[x,y,z+1])+(1/matProps2[x,y+1,z+1])
+        shearyz=4*(1/gs)*(1/shearDenomyz)
+        ds=shearyz*(vy[x,y,z+1]-vy[x,y,z]+vz[x,y+1,z]-vz[x,y,z])
+        syz[x,y,z]=syz[x,y,z]+ds*ts
+        
+
 
 def updateStress(x,y,z):
         
@@ -637,6 +672,7 @@ def updateStress(x,y,z):
 # %%
     
 # %%
+# %%
 def JBUV(x,y,z):
     
     #Vx Cases
@@ -650,7 +686,7 @@ def JBUV(x,y,z):
             vx[x,y,z]=vx[x,y,z]+dv*ts
         #x at 0
         elif matProps3[x,y,z] in [5,7,11,15,16,19,20,21,22]:
-            vx[x,y,z] += 2* ((sxx[x+1,y,z])/(matProps0[x,y,z] * gs)) * ts
+            vx[x,y,z] = 0 #2* ((sxx[x+1,y,z])/(matProps0[x,y,z] * gs)) * ts
         # x at xmax
         elif matProps3[x,y,z] in [6,8,12,17,18,23,24,25,26]:
             vx[x,y,z] -= 2 * ((sxx[x,y,z])/(matProps0[x,y,z] * gs))*ts
@@ -674,7 +710,7 @@ def JBUV(x,y,z):
             vy[x,y,z]=vy[x,y,z]+dv*ts
         #y = 0
         elif matProps3[x,y,z] in [3,9,13,15,17,19,20,23,24]:
-            vy[x,y,z] += 2* ((syy[x,y+1,z])/(matProps0[x,y,z] * gs)) * ts
+            vy[x,y,z] += 0 #2* ((syy[x,y+1,z])/(matProps0[x,y,z] * gs)) * ts
         #y = ymax
         elif matProps3[x,y,z] in [4,10,14,16,18,21,22,25,26]:
             vy[x,y,z] -= 2 * ((syy[x,y,z])/(matProps0[x,y,z] * gs))*ts
@@ -698,7 +734,7 @@ def JBUV(x,y,z):
             vz[x,y,z]=vz[x,y,z]+dv*ts
         #z at 0
         elif matProps3[x,y,z] in [1,7,8,9,10,19,21,23,25]:
-            vz[x,y,z] += 2* ((szz[x,y,z+1])/(matProps0[x,y,z] * gs)) * ts
+            vz[x,y,z] += 0 #2* ((szz[x,y,z+1])/(matProps0[x,y,z] * gs)) * ts
         #z at zmax
         elif matProps3[x,y,z] in [2,11,12,13,14,20,22,24,26]:
             vz[x,y,z] -= 2 * ((szz[x,y,z])/(matProps0[x,y,z] * gs))*ts
@@ -710,7 +746,9 @@ def JBUV(x,y,z):
             print('Unrecognized BC z', matProps3[x,y,z],x,y,z)
     except:
         vz[x,y,z] = 0
-        
+
+
+
 # %%
 def updateVelocity(x,y,z):
     try:
@@ -1345,10 +1383,74 @@ def addTies(matPropsglob, Ties):
         matPropsglob[3,start:end,ymax,0]=30
     
     return matPropsglob
-    
 
-matPropsglob = setSimSpaceBCs(matPropsglob)
+def setSimSpaceBC99(matPropsglob):
+    #matPropsglob[3,:,:,zmax]=99
+    #matPropsglob[3,:,:,0]=99
+    #matPropsglob[3,:,0,:]=99
+    #matPropsglob[3,:,ymax,:]=99
+    #matPropsglob[3,0,:,:] = 99
+    #matPropsglob[3,xmax,:,:] = 99
     
+    matPropsglob[3,1:xmax,1:ymax,0] = 1
+    matPropsglob[3,1:xmax,0,1:zmax] = 3
+    matPropsglob[3,0,1:ymax,1:zmax] = 5
+    
+    matPropsglob[3,1:xmax,1:ymax,1] = 1
+    matPropsglob[3,1:xmax,1,1:zmax] = 3
+    matPropsglob[3,1,1:ymax,1:zmax] = 5
+    
+    matPropsglob[3,1:xmax,1:ymax,zmax] = 2
+    matPropsglob[3,1:xmax,ymax,1:zmax] = 4
+    matPropsglob[3,xmax,1:ymax,1:zmax] = 6
+
+    # edges
+    # front bottom 
+    matPropsglob[3,0,1:ymax,0]=7
+    # back bottom 
+    matPropsglob[3,xmax,:,0]=8
+    # bottom left 
+    matPropsglob[3,1:xmax,0,0]=9 
+    # bottom right 
+    matPropsglob[3,:,ymax,0]=10
+    # front top 
+    matPropsglob[3,0,:,zmax]=11
+    # back top 
+    matPropsglob[3,xmax,:,zmax]=12
+    # top left 
+    matPropsglob[3,:,0,zmax]=13 
+    # top rigight 
+    matPropsglob[3,:,ymax,zmax]=14
+    # front left 
+    matPropsglob[3,0,0,1:zmax]=15
+    # front right 
+    matPropsglob[3,0,ymax,:]=16
+    # back left 
+    matPropsglob[3,xmax,0,:]=17
+    # back right 
+    matPropsglob[3,xmax,ymax,:]=18
+    ## Corners
+    # bottom left front 
+    matPropsglob[3,0,0,0]=19
+    # top left front 
+    matPropsglob[3,0,0,zmax]=20
+    # bottom right front 
+    matPropsglob[3,0,ymax,0]=21
+    # top right front 
+    matPropsglob[3,0,ymax,zmax]=22
+    # bottom left back 
+    matPropsglob[3,xmax,0,0]=23
+    # top left back 
+    matPropsglob[3,xmax,0,zmax]=24
+    # bottom right back 
+    matPropsglob[3,xmax,zmax,0]=25
+    # top right back 
+    matPropsglob[3,xmax,ymax,zmax]=26
+    
+    return matPropsglob    
+
+#matPropsglob = setSimSpaceBCs(matPropsglob)
+matPropsglob = setSimSpaceBC99(matPropsglob)    
 if RailShape:
     matPropsglob = setAirCut(matPropsglob)
     matPropsglob = setRailBCs(matPropsglob)
@@ -1463,9 +1565,14 @@ if (myid == 0 ):
     print('subs setup, line 1213.  About to start at ' + str(stime))
 
 #MidMatrix = np.zeros((gl1,Tsteps))
-MidMatrixX=[]
-MidMatrixY=[]
-MidMatrixZ=[]
+MidMatrixX = np.zeros((gl1,Tsteps))
+MidMatrixY = np.zeros((gl1,Tsteps))
+MidMatrixZ = np.zeros((gl1,Tsteps))
+
+Movements = np.zeros((gl1,gw1,gh1,Tsteps))
+DisX = np.zeros((gl1,gw1,gh1))
+DisY = np.zeros((gl1,gw1,gh1))
+DisZ = np.zeros((gl1,gw1,gh1))
 
 inner = []
 outer=[]
@@ -1486,10 +1593,11 @@ for t in range(0,Tsteps):
 
 
     for pt in inner:
-        updateStress(pt[0],pt[1],pt[2])
+        #updateStress(pt[0],pt[1],pt[2])
+        JBSU(pt[0],pt[1],pt[2])
     for pt in outer:
-        updateStress(pt[0],pt[1],pt[2])
-      
+        #updateStress(pt[0],pt[1],pt[2])
+        JBSU(pt[0],pt[1],pt[2])
 
     # cut boundaries off of arrays
     sxxt=sxx[1:npx+1,:,:]
@@ -1513,9 +1621,11 @@ for t in range(0,Tsteps):
 
 
     for pt in inner:
-        updateVelocity(pt[0],pt[1],pt[2])
+        #updateVelocity(pt[0],pt[1],pt[2])
+        JBUV(pt[0],pt[1],pt[2])
     for pt in outer:
-        updateVelocity(pt[0],pt[1],pt[2])
+        #updateVelocity(pt[0],pt[1],pt[2])
+        JBUV(pt[0],pt[1],pt[2])
         
         
     # cut boundaries off of arrays
@@ -1551,11 +1661,21 @@ for t in range(0,Tsteps):
 
     
     if myid==0:
-        MidMatrixX.append(vxg[:,inputy,inputz])
-        MidMatrixY.append(vxg[:,inputy,inputz])
-        MidMatrixZ.append(vxg[:,inputy,inputz])
-    
-        '''if t%10==0:
+        MidMatrixX[:,t] = vxg[:,inputy,inputz]
+        MidMatrixY[:,t] = vyg[:,inputy,inputz]
+        MidMatrixZ[:,t] = vzg[:,inputy,inputz]
+
+        #MidMatrixX.append(vxg[:,inputy,inputz])
+        #MidMatrixY.append(vxg[:,inputy,inputz])
+        #MidMatrixZ.append(vxg[:,inputy,inputz])
+        
+        DisX += vx[:,:,:] * ts
+        DisY += vy[:,:,:] * ts
+        DisZ += vz[:,:,:] * ts
+        Movements[:,:,:,t] = np.sqrt(DisX**2 + DisY**2 + DisZ**2)
+
+        if t%5==0:
+            '''
             fig=plt.figure()
             plt.contourf(np.transpose(vzg[:,:,int(gh1/2)]), cmap='seismic')
             plt.savefig(imFolder+'Mid/vzWeb'+str(t).zfill(5)+'.png')
@@ -1591,8 +1711,25 @@ for t in range(0,Tsteps):
             plt.savefig(imFolder + 'Head/vxHead'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)  
-        '''
-    
+            '''
+
+            fig=plt.figure()
+            plt.contourf(np.transpose(Movements[3:,:,zmax,t]), cmap='seismic')
+            plt.savefig(imFolder+'TopSurface/TopSurface'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(Movements[3:,ymax,:,t]), cmap='seismic')
+            plt.savefig(imFolder+'RightSurface/RightSurface'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(Movements[3:,0,:,t]), cmap='seismic')
+            plt.savefig(imFolder+'LeftSurface/LeftSurface'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)   
 
             
 
@@ -1631,9 +1768,9 @@ if (myid == signalLocxid) :
 if myid ==0:
     #print(MidMatrix)
     
-    MidMatrixX = np.matrix(MidMatrixX)
-    MidMatrixY = np.matrix(MidMatrixY)
-    MidMatrixZ = np.matrix(MidMatrixZ)
+    #MidMatrixX = np.matrix(MidMatrixX)
+    #MidMatrixY = np.matrix(MidMatrixY)
+    #MidMatrixZ = np.matrix(MidMatrixZ)
     
     if np.shape(MidMatrixX)[0] == Tsteps:
         MidMatrixX = MidMatrixX.T
@@ -1682,3 +1819,8 @@ if myid ==0:
     plt.savefig(imFolder+runName+'MidVel.png')
 
     print(np.shape(MidMatrixX), np.shape(MidDisplace))
+
+    for i in range(Tsteps):
+        #plt.contour(xi, yi, topSurface[:,:,t].T, v, linewidths=0.5, colors='k')
+        plt.contourf(Movements[3:,:,8,t].T, v, cmap=plt.cm.jet)
+        plt.savefig(imFolder+'Energy/Energy'+str(t).zfill(5)+'.png')
