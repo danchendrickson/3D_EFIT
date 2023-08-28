@@ -1,0 +1,33 @@
+#!/bin/csh 
+#PBS -N EFIT
+#PBS -l walltime=4:00:00
+## configured to run on typhoon or tempest 
+#PBS -l nodes=8:compute:opteron:ppn=2 
+#PBS -j eo 
+#PBS -e /sciclone/home04/camill/Outputpbs/efitout/
+
+
+set JOBID=`basename $PBS_JOBID .$PBS_DEFAULT` 
+echo jobid is $JOBID 
+echo $PATH 
+
+
+set TMPD=/sciclone/scr10/$USER/efit/${JOBID} 
+
+if (! -e $TMPD ) mkdir -p $TMPD 
+
+echo TMPD is $TMPD 
+
+cp $HOME/EFIT/EFITsim $TMPD/.
+cp $HOME/EFIT/*.h $TMPD/. 
+cp $HOME/EFIT/in.file $TMPD/.
+cp $HOME/EFIT/trans.file $TMPD/.
+cp $HOME/EFIT/*.cpp $TMPD/.
+cd $TMPD 
+
+pbsmvp2 -v ./EFITsim > log.dat
+
+
+
+
+

@@ -1,0 +1,52 @@
+EFIT_cart.cpp changelog
+Created 06 Sept 2011 Eric A. Dieckman (WM)
+
+List of changes made to EFIT.cpp to create EFIT_cart.cpp
+Also changes made to associated files (ie, 'simsets.h')
+
+---
+06 Sept 2011 EAD
+
+++ Goal is to simplify and clean up EFIT.cpp so it makes sense for Cartesian geometries (EFIT.cpp was originally written in cylindrical coords)
++ Cleaned up indentation and comments from original code
++ Renamed include file 'spipe.h' to 'setup_cart_space.h' to remove outdated references to pipe geometries
++ Change order of variables in 'in.file' 
+  - Make simparams[0] is x, simparams[1] is y, and simparams[2] is z (instead of y,x,z as previous)
+  - This requires changing the order the variables are written to 'in.file' in the Matlab script 'EFIT_cart_3D_inputfiles.m'
+  - Remove angular step size 'dp' - replace all instances with step size 'ds' (simparams[3])
+    - Must reindex simparams
+  - Remove references to 'rbeg'
+  - Rename all 'pipe' to 'simspace'
+  - simparams[11] (max1) is always set to simparams[0] (num1), so go ahead and hardset that (references to simparams[11] now go to simparams[0])
+  - Clean up multiple assignments with 'maxt', 'outputevery', 'max1', and 'm2m3'
+  - Shrink size of simspace from [15] to [11]
+
+--
+07 Sept 2011 EAD
+  - Uploaded new files to SciClone and checked that code still compiles
+  - Fix all compiler warnings about variables declared but never referenced
+  - Replace 'zbeg' with 'xbeg' because the simulation is now divided along the x dimension -> also for 'setup_cart_space.h'
+
+--
+08 Sept 2011 EAD
+  - Cleaned up 'array3D.h' and 'array3D_int.h'
+  - In 'EFIT_cart.cpp', rename 'zpos' and 'zposs' to 'xpos' and 'xposs' for clarity
+  - In 'setup_cart_space.h' 'UpdateTs' and 'UpdateVs', change variables for clarity: z -> x, r -> y, p -> z
+
+--
+20 Sept 2011 EAD
+  - Cleaned up 'transducer.h'
+  - Defined int x,y,z; in 'setup_cart_space.h' 'UpdateTs' and 'UpdateVs'
+  - Test compile and run on SciClone; compile OK, run FAIL
+
+-- 
+21 Sept 2011 EAD
+  - Defining int x,y,z in 'setup_cart_space.h' 'UpdateTs' and 'UpdateVs' changed to overall definition in line 68 (replace r,z,p)
+  - 'EFIT_cart.cpp' line 360: MPI_Send needs the first element ('&simparams[0]', not '&simparams[1]')
+  - Retest compile/run on SciClone; compile OK, doesn't run quite right
+    - 'maxt' and 'outputevery' weren't defined correctly- corrected lines 344-348 => runs okay!
+
+FUTURE TO DO
+  - Confusing variable renaming in 'setup_cart_space.h' reflector sections
+    - Due to different reflector types requiring different inputs
+    - Correct by using generic names to begin, then renaming generic variables within each function to things that make sense
