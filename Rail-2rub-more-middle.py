@@ -29,13 +29,13 @@ RailShape = True
 Flaw = False
 
 #Dimmesnsion of simulation space in meters
-length1 = 3
+length1 = 4
 width1 = 0.1524 # 0.1524
 height1 = 0.1524
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = 'DoubleRub10m'
+runName = 'DoubleRub10mExt'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
@@ -55,7 +55,7 @@ figDPI = 600
 # 2 for rubbing flange on side
 # 3 for plane wave 
 
-FFunction = 1
+FFunction = 6
 
 WheelLoad = 173000 #crane force in Neutons
 
@@ -79,7 +79,7 @@ omegaT1 = ct1 / frequency
 
 #Image Folder
 if FFunction == 1:
-    imFolder += 'Slap3m/'
+    imFolder += 'TopHit/'
 elif FFunction == 2:
     imFolder += 'Temp/'
 elif FFunction == 3:
@@ -89,7 +89,7 @@ elif FFunction == 4:
 elif FFunction == 5:
     imFolder += 'RailLong/'
 elif FFunction == 6:   #long rail, two wheel rubs
-    imFolder += 'Double10m/'
+    imFolder += 'Double4m/'
 
     
 '''
@@ -214,13 +214,13 @@ gridEndHeadWidth = round((gw1-3)  * relEndHeadWidth)  + 1
 
 #Make the Signal Location grid
 if FFunction == 1:
-    pnodes = 4
+    pnodes = max(int(whlayer / 2),3)
     contactLength = max(int(0.001 / gs),3)  #1 cm contact patch or 3 nodes, whichever is larger
     
     #starting at .25 down, to be between the first 2 ties
     WheelStartPoint = int(0.25 * gl1)
     
-    signalLocation[WheelStartPoint:WheelStartPoint+contactLength,gridStartHeadWidth:gridEndHeadWidth, -4:-2] = 1
+    signalLocation[WheelStartPoint:WheelStartPoint+contactLength,gridStartHeadWidth:gridEndHeadWidth, -3:] = 1
     
 elif FFunction == 2:
      
@@ -247,20 +247,23 @@ elif FFunction == 5:
     
 
 elif FFunction == 6:
-     
-    signalLocation[14:20,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
-
-    signalLocation[20,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
-    signalLocation[13,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
-    signalLocation[14:20,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
-
-    sep = int(1.360/gs)
     
-    signalLocation[14+sep:20+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 1
+    Wheel1Distance = 1 # wheel starts 1 meter down track
+    Wheel1Start = int(Wheel1Distance / gs)
+    
+    signalLocation[Wheel1Start:Wheel1Start+6,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
 
-    signalLocation[20+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
-    signalLocation[13+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
-    signalLocation[14+sep:20+sep,gridEndHeadWidth-3:gridEndHeadWidth-2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start+6,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start-1,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start:Wheel1Start+6,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
+
+    sep = int(1.360/gs) # Wheel 2 is centered 1.36 meters from wheel 1
+    
+    signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 1
+
+    signalLocation[Wheel1Start+6+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start-1+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridEndHeadWidth-3:gridEndHeadWidth-2,gridStartHead:zmax-2] = 0.5
     
     
 if myid == 0:
@@ -648,7 +651,7 @@ if (myid == 0 ):
     writeFile = open(imFolder + 'LaserPoints.csv','a')
     writeFile.write("Time,topX, topY, topZ, endX, endY, endZ, rHeadX, rHeadY, rHeadZ, lHeadX, lHeadY, lHeadZ, rWebX, rWebY, rWebZ, lWebX, lWebY, lWebZ\n")
     AnimationData =  open(imFolder + 'Anima.csv','a')
-    AnimationData.write("time,x,y,z,Energy\n")
+    AnimationData.write("time,x,y,z,Energy,DisX,DisY,DisZ\n")
 #MidMatrix = np.zeros((gl1,Tsteps))
 #MidMatrixX = np.zeros((gl1,Tsteps))
 #MidMatrixY = np.zeros((gl1,Tsteps))
@@ -762,23 +765,25 @@ for t in range(0,Tsteps):
         
         if t%10==0:
             #Movements[:,:,int(t/5)-1] = np.sqrt(DisX[:,:,zmax-3]**2 + DisY[:,:,zmax-3]**2 + DisZ[:,:,zmax-3]**2)
-            writeFile.write(str(t)+','
-                             +str(FSignal[-1][0])+','+str(FSignal[-1][1])+','+str(FSignal[-1][2])+','
-                             +str(BSignal[-1][0])+','+str(BSignal[-1][1])+','+str(BSignal[-1][2])+','
-                             +str(USignal[-1][0])+','+str(USignal[-1][1])+','+str(USignal[-1][2])+','
-                             +str(DSignal[-1][0])+','+str(DSignal[-1][1])+','+str(DSignal[-1][2])+','
-                             +str(RSignal[-1][0])+','+str(RSignal[-1][1])+','+str(RSignal[-1][2])+','
-                             +str(LSignal[-1][0])+','+str(LSignal[-1][1])+','+str(LSignal[-1][2])+','
-                             +str(MSignal[-1][0])+','+str(MSignal[-1][1])+','+str(MSignal[-1][2])+','
-                             +'/n'
+            writeFile.write(str(t)+","
+                             +str(FSignal[-1][0])+","+str(FSignal[-1][1])+","+str(FSignal[-1][2])+","
+                             +str(BSignal[-1][0])+","+str(BSignal[-1][1])+","+str(BSignal[-1][2])+","
+                             +str(USignal[-1][0])+","+str(USignal[-1][1])+","+str(USignal[-1][2])+","
+                             +str(DSignal[-1][0])+","+str(DSignal[-1][1])+","+str(DSignal[-1][2])+","
+                             +str(RSignal[-1][0])+","+str(RSignal[-1][1])+","+str(RSignal[-1][2])+","
+                             +str(LSignal[-1][0])+","+str(LSignal[-1][1])+","+str(LSignal[-1][2])+","
+                             +str(MSignal[-1][0])+","+str(MSignal[-1][1])+","+str(MSignal[-1][2])
+                             +"/n"
                             )
             
             for x in range(np.shape(DisX)[0]):
-                for x in range(np.shape(DisX)[1]):
-                    for x in range(np.shape(DisX)[2]):
-                        AnimationData.write(str(t)+","+str(x)+","+str(y)+","+str(z)+","
-                                            +str(np.sqrt(DisX[x,y,z]**2+DisY[x,y,z]**2+DisZ[x,y,z]**2))
-                                            +"\n")
+                for y in range(np.shape(DisX)[1]):
+                    for z in range(np.shape(DisX)[2]):
+                        if matBCall[x,y,z] == 1:
+                            AnimationData.write(str(t)+","+str(x)+","+str(y)+","+str(z)+","
+                                                +str(np.sqrt(DisX[x,y,z]**2+DisY[x,y,z]**2+DisZ[x,y,z]**2))+","
+                                                +str(DisX[x,y,z])+","+str(DisY[x,y,z])+","+str(DisZ[x,y,z])
+                                                +"\n")
 
             fig=plt.figure()
             plt.contourf(np.transpose(vzg[3:,:,int(gh1/2)]), cmap='seismic')
