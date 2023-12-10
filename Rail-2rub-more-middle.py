@@ -29,7 +29,7 @@ RailShape = True
 Flaw = False
 
 #Dimmesnsion of simulation space in meters
-length1 = 4
+length1 = 2.5
 width1 = 0.1524 # 0.1524
 height1 = 0.1524
 
@@ -46,7 +46,7 @@ frequency = 49720.0  #brute forced this number to be where simulation frequency
 #            74574  is 3,000,000 hz running, and sample rate %15 is 200k same as actual, if we need more dense
 Signalfrequency = 16300
 
-cycles = 10000
+cycles = 10
 
 figDPI = 600
 
@@ -89,7 +89,7 @@ elif FFunction == 4:
 elif FFunction == 5:
     imFolder += 'RailLong/'
 elif FFunction == 6:   #long rail, two wheel rubs
-    imFolder += 'Double4m/'
+    imFolder += 'Double2.5m/'
 
     
 '''
@@ -248,7 +248,7 @@ elif FFunction == 5:
 
 elif FFunction == 6:
     
-    Wheel1Distance = 1 # wheel starts 1 meter down track
+    Wheel1Distance = 0.5 # wheel starts 1 meter down track
     Wheel1Start = int(Wheel1Distance / gs)
     
     signalLocation[Wheel1Start:Wheel1Start+6,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
@@ -597,41 +597,42 @@ if (myid == 0) :
     print('split matprops to globs, scratttered parameters to processors, line 449')
     
     ## All signals at 4 nodes from end
-    FromEnd = 50
+    FromEnd = int(.05 / gs) # 5 cm from end, about where laser recording is done
+    
     # Top of rail
     FSignalLocX= gl1-FromEnd
     FSignalLocY=int(gw1/2)
-    FSignalLocZ=gh1-4
+    FSignalLocZ=gh1-2
 
     ## End halfway up head
     BSignalLocX=gl1-FromEnd
     BSignalLocY=int(gw1/2)
-    BSignalLocZ=int((gh1-gridStartHead)/2+gridStartHead)
+    BSignalLocZ=gh1-int((gh1-gridStartHead)/2)
 
     ## left of head
     USignalLocX=gl1-FromEnd
-    USignalLocY=gridStartHeadWidth+1
-    USignalLocZ=int((gh1-gridStartHead)/2+gridStartHead)
+    USignalLocY=gridStartHeadWidth
+    USignalLocZ=gh1-int((gh1-gridStartHead)/2)
 
     ## right of head
     DSignalLocX=gl1-FromEnd
-    DSignalLocY=gridEndHeadWidth-1
-    DSignalLocZ=int((gh1-gridStartHead)/2+gridStartHead)
+    DSignalLocY=gridEndHeadWidth
+    DSignalLocZ=gh1-int((gh1-gridStartHead)/2)
 
     ## right of web
     RSignalLocX=gl1-FromEnd
-    RSignalLocY=gridStartWeb+1
-    RSignalLocZ=int((gridStartHead-gridEndFoot)/2+gridEndFoot)
+    RSignalLocY=gridStartWeb
+    RSignalLocZ=int(gh1/2)
 
     ## Left of Web
     LSignalLocX=gl1-FromEnd
-    LSignalLocY=gridEndWeb-1
-    LSignalLocZ=int((gridStartHead-gridEndFoot)/2+gridEndFoot)
+    LSignalLocY=gridEndWeb
+    LSignalLocZ=int(gh1/2)
 
     ## End of Web
-    MSignalLocX=gl1-FromEnd
+    MSignalLocX=gl1-2
     MSignalLocY=int(gw1/2)
-    MSignalLocZ=int((gridStartHead-gridEndFoot)/2+gridEndFoot)
+    MSignalLocZ=int(gh1/2)
 
 
     #signal locations going to be a quarter of the way in the middle from the 
@@ -773,17 +774,17 @@ for t in range(0,Tsteps):
                              +str(RSignal[-1][0])+","+str(RSignal[-1][1])+","+str(RSignal[-1][2])+","
                              +str(LSignal[-1][0])+","+str(LSignal[-1][1])+","+str(LSignal[-1][2])+","
                              +str(MSignal[-1][0])+","+str(MSignal[-1][1])+","+str(MSignal[-1][2])
-                             +"/n"
+                             +"\n"
                             )
             
-            for x in range(np.shape(DisX)[0]):
-                for y in range(np.shape(DisX)[1]):
-                    for z in range(np.shape(DisX)[2]):
-                        if matBCall[x,y,z] == 1:
-                            AnimationData.write(str(t)+","+str(x)+","+str(y)+","+str(z)+","
-                                                +str(np.sqrt(DisX[x,y,z]**2+DisY[x,y,z]**2+DisZ[x,y,z]**2))+","
-                                                +str(DisX[x,y,z])+","+str(DisY[x,y,z])+","+str(DisZ[x,y,z])
-                                                +"\n")
+            #for x in range(np.shape(DisX)[0]):
+            #    for y in range(np.shape(DisX)[1]):
+            #        for z in range(np.shape(DisX)[2]):
+            #            if matBCall[x,y,z] == 1:
+            #                AnimationData.write(str(t)+","+str(x)+","+str(y)+","+str(z)+","
+            #                                    +str(np.sqrt(DisX[x,y,z]**2+DisY[x,y,z]**2+DisZ[x,y,z]**2))+","
+            #                                    +str(DisX[x,y,z])+","+str(DisY[x,y,z])+","+str(DisZ[x,y,z])
+            #                                    +"\n")
 
             fig=plt.figure()
             plt.contourf(np.transpose(vzg[3:,:,int(gh1/2)]), cmap='seismic')
@@ -839,8 +840,41 @@ for t in range(0,Tsteps):
             plt.savefig(imFolder+'LeftSurface/LeftSurface'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)   
-
+           
             
+            fig=plt.figure()
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridStartHeadWidth+1,gridStartHead:]**2 + DisY[:,gridStartHeadWidth+1,gridStartHead:]**2 + DisZ[:,gridStartHeadWidth+1,gridStartHead:]**2)), cmap='seismic')
+            plt.savefig(imFolder+'HeadStart/HS'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)   
+           
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridEndHeadWidth-1,gridStartHead:]**2 + DisY[:,gridEndHeadWidth-1,gridStartHead:]**2 + DisZ[:,gridEndHeadWidth-1,gridStartHead:]**2)), cmap='seismic')
+            plt.savefig(imFolder+'HeadEnd/HE'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)   
+           
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2 + DisY[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2 + DisZ[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2)), cmap='seismic')
+            plt.savefig(imFolder+'WebStart/WS'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)   
+           
+            
+            fig=plt.figure()
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2 + DisY[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2 + DisZ[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2)), cmap='seismic')
+            plt.savefig(imFolder+'WebEnd/WE'+str(t).zfill(5)+'.png')
+            # SideRub vs TopHit for which case
+            plt.close(fig)   
+           
+            if i%1000 ==0:
+                writeFile.close()
+                AnimationData.close()
+                writeFile = open(imFolder + 'LaserPoints.csv','a')
+                AnimationData =  open(imFolder + 'Anima.csv','a')
+
 
     # Collect vx, sxx checksum contributions for printing
     vxt=vx[1:npx+1,:,:]
