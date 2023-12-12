@@ -89,7 +89,7 @@ elif FFunction == 4:
 elif FFunction == 5:
     imFolder += 'RailLong/'
 elif FFunction == 6:   #long rail, two wheel rubs
-    imFolder += 'Double2.5m/'
+    imFolder += 'Double2.5ma/'
 
     
 '''
