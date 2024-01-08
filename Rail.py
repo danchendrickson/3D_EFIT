@@ -79,7 +79,7 @@ omegaT1 = ct1 / frequency
 
 #Image Folder
 if FFunction == 1:
-    imFolder += 'Slap3m/'
+    imFolder += 'RailPy1Slap/'
 elif FFunction == 2:
     imFolder += 'Temp/'
 elif FFunction == 3:
@@ -262,6 +262,8 @@ elif FFunction == 6:
     signalLocation[13+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
     signalLocation[14+sep:20+sep,gridEndHeadWidth-3:gridEndHeadWidth-2,gridStartHead:zmax-2] = 0.5
     
+
+specificWheelLoad = np.sum(signalLocation) / WheelLoad
     
 if myid == 0:
     print('globs made, line 145')

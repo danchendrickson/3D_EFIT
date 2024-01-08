@@ -1,5 +1,5 @@
 #!/bin/tcsh
-#PBS -N Drop4m
+#PBS -N BigRailRun
 #PBS -l nodes=40:bora:ppn=20
 #PBS -l walltime=72:00:00
 #PBS -k oe
@@ -8,4 +8,4 @@
 cd $PBS_O_WORKDIR
 
 conda activate mpi
-mpiexec -np 800 python3 -u Rail-slap-WheelLoad.py >& Drop-11-01-1300.out
+mpiexec -np 800 python3 -u Rail-2rubLockBigRun.py >& TryBigRun-240107.out

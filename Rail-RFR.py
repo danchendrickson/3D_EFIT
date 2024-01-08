@@ -33,26 +33,30 @@ AirCut = False
 RailShape = True
 Flaw = False
 Absorbing = False
+CSVs = False
+Pickles = True
+Images = False
 
 #Dimmesnsion of simulation space in meters
-length1 = 20
+length1 = 10
 width1 = 0.1524 # 0.1524
 height1 = 0.1524
+Wheel1Distance = 1.5 # wheel starts 1 meter down track
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = '20m Rail At 15x long for 1k FP'
+runName = '12mLongRail'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
 
 #Choose ferquency to be used for excitment
-frequency = 74574  #brute forced this number to be where simulation frequency 
+frequency = 74574.0  #brute forced this number to be where simulation frequency 
 #            49720  is 2,000,000, alowing for %10 to equal laser 200k same as actual
 #            74574  is 3,000,000 hz running, and sample rate %15 is 200k same as actual, if we need more dense
 Signalfrequency = 16300
 
-SaveSize = 125  #experimentally found for where we don't run out of memory.
+SaveSize = 250  #experimentally found for where we don't run out of memory.
 
 cycles = 60
 
@@ -68,7 +72,6 @@ figDPI = 600
 
 FFunction = 6
 
-Wheel1Distance = 15.2 # wheel starts 1 meter down track
 WheelLoad = 173000 #crane force in Neutons
 
 #MATERIAL 1 ((steel))
@@ -101,7 +104,7 @@ elif FFunction == 4:
 elif FFunction == 5:
     imFolder += 'RailLong/'
 elif FFunction == 6:   #long rail, two wheel rubs
-    imFolder += '20m15XRfRq/'
+    imFolder += '12mFromRFR/'
 
 if myid==0:
     if os.path.isdir(imFolder):
@@ -109,28 +112,6 @@ if myid==0:
     else:
         os.makedirs(imFolder)
 
-    
-'''
-#MATERIAL 2  (made up)
-pRatio2= 0.3
-yModulus2= 100*(10**8)
-rho2 = 3000       
-mu2 = yModulus2/(2*(1+pRatio2))                    
-lmbda2 = abs(2 * mu2 * pRatio2 / (1 - 2 * pRatio2))
-
-#Calculate speed of longitudinal and transverse waves in material 1
-cl2= np.sqrt((lmbda2 + 2* mu2)/rho2)
-ct2 = np.sqrt(mu2/rho2)
-
-#calculate wavelengths in material 2
-omegaL2 = cl2 / frequency
-omegaT2 = ct2 / frequency
-
-if myid == 0:
-    print('material 2 wave speeds:' ,cl2,ct2)
-    
-    
-'''
 
 #Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
 #ts = 1 / frequency / 10    #time step
@@ -138,21 +119,14 @@ gs = (min(omegaL1, omegaT1) /12)    #grid step, omegaL2,omegaT2
 ts = gs/((max(cl1,ct1))*(np.sqrt(3)))*0.95 #time step, cl2,ct2
 
 
-ReadPoint = 0.05 #lasers are 5cm from end
-FalseWaveTravelDistance = Wheel1Distance + length1 - ReadPoint
-FalseWaveTravelTime = FalseWaveTravelDistance / cl1
-StepsTillHit = int(FalseWaveTravelTime / ts) + 2 #if plane wave, some wiggle room since also needs to move left/right and up/down
-
-FirstWheelTransverseWaveDistance = length1 - Wheel1Distance + ReadPoint
-FirstWheelTransverseFirstReflectionTime = FirstWheelTransverseWaveDistance / ct1
-
-GoodDataPints = (FalseWaveTravelTime - FirstWheelTransverseFirstReflectionTime) / ts
+#change to lower frequency but with dense grid
+frequency = 16300
 
 #Run for 3 seconds, what the laser can store:
 #runtime = cycles / frequency #cycles / frequency 
 #Tsteps = int(math.ceil(runtime / ts)) + 1       #total Time Steps
 
-Tsteps = StepsTillHit   #calculated spereately for needed space to get reflections
+Tsteps = 6900   #calculated spereately for needed space to get reflections
 runtime = Tsteps * ts
 
 #number of grid points
@@ -169,6 +143,8 @@ ymax=gw1-1
 zmax=gh1-1
 
 #####
+
+
 
 
 #MPI EJW Section 1
@@ -548,13 +524,14 @@ amp=10000
 decayRate= 0
 sinConst=ts*amp/rho1
 
-sinInputSignal=sinConst*np.sin(2*np.pi*Signalfrequency*timeVec)*np.exp(-decayRate*timeVec)
+sinInputSignal=sinConst*np.sin(2*np.pi*frequency*timeVec)*np.exp(-decayRate*timeVec)
 #sinInputSignal[int(.1*Tsteps+1):] = 0
 
 #Create End Damping to make asorbing boundary
 Absorber = np.ones((gl1,gw1,gh1))
 StepAbsorption = 0.5
 AbsorptionRange = 101
+
 if Absorbing:
     for x in range(AbsorptionRange):
         Absorber[x:AbsorptionRange+1,:,:] *= StepAbsorption
@@ -695,14 +672,20 @@ if (myid == 0) :
     Parameters = {"AirCut" : AirCut,
                   "RailShape":  RailShape,
                   "Flaw" : Flaw,
+                  "AbsorptionUsed" : Absorbing,
+                  "SavingToCSV" : CSVs,
+                  "SavingToPickle" : Pickles,
+                  "MakingImages" : Images,
                   "Length" : length1,
                   "Width" : width1,
                   "Height" : height1,
+                  "Wheel1Distance" : Wheel1Distance,
                   "SaveFolder" : imFolder,
                   "RunTitle" : runName,
                   "TiesIncluded" : Ties,
                   "GridDesignFrequency" : frequency,
                   "InputSignalFrequency" : Signalfrequency,
+                  "TimeStepFreqeuency" : 1 / ts,
                   "SimulationCycleLength" : cycles,
                   "ForcingFuctionNumber" : FFunction,
                   "PerWheelForce" : WheelLoad,
@@ -718,6 +701,9 @@ if (myid == 0) :
                   "LargestXnode" : xmax,
                   "LargestYnode" : ymax,
                   "LargestZnode" : zmax,
+                  "GridStep" : gs,
+                  "TimeStep" : ts,
+                  "RunTime" : runtime,
                   "SaveEveryXStep" : SaveSize,
                   "HeightStartHeadNode" : gridStartHead,
                   "WidthStartWebNode" : gridStartWeb,
@@ -726,8 +712,7 @@ if (myid == 0) :
                   "WidthStartHeadNode" : gridStartHeadWidth,
                   "WidthEndHeadNode" : gridEndHeadWidth,
                   "AbsorberLengthNodes" : AbsorptionRange,
-                  "AbsorptionPerNode" : StepAbsorption,
-                  "ExpectedGoodData" : GoodDataPints
+                  "AbsorptionPerNode" : StepAbsorption
                  }
                   
     file=open(imFolder+'Parameters.p','wb')
@@ -742,20 +727,22 @@ if (myid == 0) :
     
 stime = time.time()
 
-'''
-if (myid == 0 ):
+
+if (myid == 0 and CSVs == True):
     print('subs setup, line 1213.  About to start at ' + str(stime))
     writeFile = open(imFolder + 'LaserPoints.csv','a')
     writeFile.write("Time,topX, topY, topZ, endX, endY, endZ, rHeadX, rHeadY, rHeadZ, lHeadX, lHeadY, lHeadZ, rWebX, rWebY, rWebZ, lWebX, lWebY, lWebZ\n")
     AnimationData =  open(imFolder + 'Anima.csv','a')
     AnimationData.write("time,x,y,z,Energy,DisX,DisY,DisZ\n")
-'''
-#MidMatrix = np.zeros((gl1,Tsteps))
-#MidMatrixX = np.zeros((gl1,Tsteps))
-#MidMatrixY = np.zeros((gl1,Tsteps))
-#MidMatrixZ = np.zeros((gl1,Tsteps))
 
-#Movements = np.zeros((gl1,gw1,int(Tsteps/10)))
+if Images == True:
+    MidMatrix = np.zeros((gl1,Tsteps))
+    MidMatrixX = np.zeros((gl1,Tsteps))
+    MidMatrixY = np.zeros((gl1,Tsteps))
+    MidMatrixZ = np.zeros((gl1,Tsteps))
+
+    Movements = np.zeros((gl1,gw1,int(Tsteps/10)))
+    
 DisX = np.zeros((gl1,gw1,gh1))
 DisY = np.zeros((gl1,gw1,gh1))
 DisZ = np.zeros((gl1,gw1,gh1))
@@ -843,86 +830,77 @@ for t in range(0,Tsteps):
 
     
     if myid==0:
-        '''USignal[t]=[vxg[USignalLocX,USignalLocY,USignalLocZ],vyg[USignalLocX,USignalLocY,USignalLocZ],vzg[USignalLocX,USignalLocY,USignalLocZ]]
-        DSignal[t]=[vxg[DSignalLocX,DSignalLocY,DSignalLocZ],vyg[DSignalLocX,DSignalLocY,DSignalLocZ],vzg[DSignalLocX,DSignalLocY,DSignalLocZ]]
-        RSignal[t]=[vxg[RSignalLocX,RSignalLocY,RSignalLocZ],vyg[RSignalLocX,RSignalLocY,RSignalLocZ],vzg[RSignalLocX,RSignalLocY,RSignalLocZ]]
-        LSignal[t]=[vxg[LSignalLocX,LSignalLocY,LSignalLocZ],vyg[LSignalLocX,LSignalLocY,LSignalLocZ],vzg[LSignalLocX,LSignalLocY,LSignalLocZ]]
-        MSignal[t]=[vxg[MSignalLocX,MSignalLocY,MSignalLocZ],vyg[MSignalLocX,MSignalLocY,MSignalLocZ],vzg[MSignalLocX,MSignalLocY,MSignalLocZ]]
-        FSignal[t]=[vxg[FSignalLocX,FSignalLocY,FSignalLocZ],vyg[FSignalLocX,FSignalLocY,FSignalLocZ],vzg[FSignalLocX,FSignalLocY,FSignalLocZ]]
-        BSignal[t]=[vxg[BSignalLocX,BSignalLocY,BSignalLocZ],vyg[BSignalLocX,BSignalLocY,BSignalLocZ],vzg[BSignalLocX,BSignalLocY,BSignalLocZ]]
+        if CSVs == True:
+            USignal[t]=[vxg[USignalLocX,USignalLocY,USignalLocZ],
+                        vyg[USignalLocX,USignalLocY,USignalLocZ],
+                        vzg[USignalLocX,USignalLocY,USignalLocZ]]
+            DSignal[t]=[vxg[DSignalLocX,DSignalLocY,DSignalLocZ],
+                        vyg[DSignalLocX,DSignalLocY,DSignalLocZ],
+                        vzg[DSignalLocX,DSignalLocY,DSignalLocZ]]
+            RSignal[t]=[vxg[RSignalLocX,RSignalLocY,RSignalLocZ],
+                        vyg[RSignalLocX,RSignalLocY,RSignalLocZ],
+                        vzg[RSignalLocX,RSignalLocY,RSignalLocZ]]
+            LSignal[t]=[vxg[LSignalLocX,LSignalLocY,LSignalLocZ],
+                        vyg[LSignalLocX,LSignalLocY,LSignalLocZ],
+                        vzg[LSignalLocX,LSignalLocY,LSignalLocZ]]
+            MSignal[t]=[vxg[MSignalLocX,MSignalLocY,MSignalLocZ],
+                        vyg[MSignalLocX,MSignalLocY,MSignalLocZ],
+                        vzg[MSignalLocX,MSignalLocY,MSignalLocZ]]
+            FSignal[t]=[vxg[FSignalLocX,FSignalLocY,FSignalLocZ],
+                        vyg[FSignalLocX,FSignalLocY,FSignalLocZ],
+                        vzg[FSignalLocX,FSignalLocY,FSignalLocZ]]
+            BSignal[t]=[vxg[BSignalLocX,BSignalLocY,BSignalLocZ],
+                        vyg[BSignalLocX,BSignalLocY,BSignalLocZ],
+                        vzg[BSignalLocX,BSignalLocY,BSignalLocZ]]
 
-        '''
-        #MidMatrixX[:,t] = vxg[:,inputy,inputz]
-        #MidMatrixY[:,t] = vyg[:,inputy,inputz]
-        #MidMatrixZ[:,t] = vzg[:,inputy,inputz]
+            DisX += vxg[:,:,:] * ts
+            DisY += vyg[:,:,:] * ts
+            DisZ += vzg[:,:,:] * ts
+            DisX += vxg[:,:,:] * ts
+            DisY += vyg[:,:,:] * ts
+            DisZ += vzg[:,:,:] * ts
+            Movements[:,:,:,t%SaveSize] = np.sqrt(DisX**2 + DisY**2 + DisZ**2)  # ad the modulous 1000 for big model and multi save
+            MovementsX[:,:,:,t%SaveSize] = DisX
+            MovementsY[:,:,:,t%SaveSize] = DisY
+            MovementsZ[:,:,:,t%SaveSize] = DisZ
 
-        #MidMatrixX.append(vxg[:,inputy,inputz])
-        #MidMatrixY.append(vxg[:,inputy,inputz])
-        #MidMatrixZ.append(vxg[:,inputy,inputz])
-        
-        DisX += vxg[:,:,:] * ts
-        DisY += vyg[:,:,:] * ts
-        DisZ += vzg[:,:,:] * ts
-        DisX += vxg[:,:,:] * ts
-        DisY += vyg[:,:,:] * ts
-        DisZ += vzg[:,:,:] * ts
-        Movements[:,:,:,t%SaveSize] = np.sqrt(DisX**2 + DisY**2 + DisZ**2)  # ad the modulous 1000 for big model and multi save
-        MovementsX[:,:,:,t%SaveSize] = DisX
-        MovementsY[:,:,:,t%SaveSize] = DisY
-        MovementsZ[:,:,:,t%SaveSize] = DisZ
-        
-        Min = np.min(Movements[:,:,:,t%SaveSize])
-        Max = np.max(Movements[:,:,:,t%SaveSize])
-        if Min < MinMax[0,0]:
-            MinMax[0,0] = Min
-        if Min < MinMax[0,1]:
-            MinMax[0,0] = Min
+            Min = np.min(Movements[:,:,:,t%SaveSize])
+            Max = np.max(Movements[:,:,:,t%SaveSize])
+            if Min < MinMax[0,0]:
+                MinMax[0,0] = Min
+            if Min < MinMax[0,1]:
+                MinMax[0,0] = Min
 
-        Min = np.min(MovementsX[:,:,:,t%SaveSize])
-        Max = np.max(MovementsX[:,:,:,t%SaveSize])
-        if Min < MinMax[1,0]:
-            MinMax[1,0] = Min
-        if Min < MinMax[1,1]:
-            MinMax[1,1] = Min
-        
-        Min = np.min(MovementsY[:,:,:,t%SaveSize])
-        Max = np.max(MovementsY[:,:,:,t%SaveSize])
-        if Min < MinMax[2,0]:
-            MinMax[2,0] = Min
-        if Min < MinMax[2,1]:
-            MinMax[2,1] = Min
+            Min = np.min(MovementsX[:,:,:,t%SaveSize])
+            Max = np.max(MovementsX[:,:,:,t%SaveSize])
+            if Min < MinMax[1,0]:
+                MinMax[1,0] = Min
+            if Min < MinMax[1,1]:
+                MinMax[1,1] = Min
 
-        Min = np.min(MovementsZ[:,:,:,t%SaveSize])
-        Max = np.max(MovementsZ[:,:,:,t%SaveSize])
-        if Min < MinMax[3,0]:
-            MinMax[3,0] = Min
-        if Min < MinMax[3,1]:
-            MinMax[3,1] = Min
-         
-        
-        #if t%10==0:
-            #Movements[:,:,int(t/5)-1] = np.sqrt(DisX[:,:,zmax-3]**2 + DisY[:,:,zmax-3]**2 + DisZ[:,:,zmax-3]**2)
-        '''
-            writeFile.write(str(t)+","
-                             +str(FSignal[-1][0])+","+str(FSignal[-1][1])+","+str(FSignal[-1][2])+","
-                             +str(BSignal[-1][0])+","+str(BSignal[-1][1])+","+str(BSignal[-1][2])+","
-                             +str(USignal[-1][0])+","+str(USignal[-1][1])+","+str(USignal[-1][2])+","
-                             +str(DSignal[-1][0])+","+str(DSignal[-1][1])+","+str(DSignal[-1][2])+","
-                             +str(RSignal[-1][0])+","+str(RSignal[-1][1])+","+str(RSignal[-1][2])+","
-                             +str(LSignal[-1][0])+","+str(LSignal[-1][1])+","+str(LSignal[-1][2])+","
-                             +str(MSignal[-1][0])+","+str(MSignal[-1][1])+","+str(MSignal[-1][2])
-                             +"\n"
-                            )
-        '''
-            #for x in range(np.shape(DisX)[0]):
-            #    for y in range(np.shape(DisX)[1]):
-            #        for z in range(np.shape(DisX)[2]):
-            #            if matBCall[x,y,z] == 1:
-            #                AnimationData.write(str(t)+","+str(x)+","+str(y)+","+str(z)+","
-            #                                    +str(np.sqrt(DisX[x,y,z]**2+DisY[x,y,z]**2+DisZ[x,y,z]**2))+","
-            #                                    +str(DisX[x,y,z])+","+str(DisY[x,y,z])+","+str(DisZ[x,y,z])
-            #                                    +"\n")
-        '''
+            Min = np.min(MovementsY[:,:,:,t%SaveSize])
+            Max = np.max(MovementsY[:,:,:,t%SaveSize])
+            if Min < MinMax[2,0]:
+                MinMax[2,0] = Min
+            if Min < MinMax[2,1]:
+                MinMax[2,1] = Min
+
+            Min = np.min(MovementsZ[:,:,:,t%SaveSize])
+            Max = np.max(MovementsZ[:,:,:,t%SaveSize])
+            if Min < MinMax[3,0]:
+                MinMax[3,0] = Min
+            if Min < MinMax[3,1]:
+                MinMax[3,1] = Min
+
+        if Images == True:
+            MidMatrixX[:,t] = vxg[:,inputy,inputz]
+            MidMatrixY[:,t] = vyg[:,inputy,inputz]
+            MidMatrixZ[:,t] = vzg[:,inputy,inputz]
+
+            MidMatrixX.append(vxg[:,inputy,inputz])
+            MidMatrixY.append(vxg[:,inputy,inputz])
+            MidMatrixZ.append(vxg[:,inputy,inputz])
+
             fig=plt.figure()
             plt.contourf(np.transpose(vzg[3:,:,int(gh1/2)]), cmap='seismic')
             plt.savefig(imFolder+'Mid/vzWeb'+str(t).zfill(5)+'.png')
@@ -980,34 +958,63 @@ for t in range(0,Tsteps):
            
             
             fig=plt.figure()
-            plt.contourf(np.transpose(np.sqrt(DisX[:,gridStartHeadWidth+1,gridStartHead:]**2 + DisY[:,gridStartHeadWidth+1,gridStartHead:]**2 + DisZ[:,gridStartHeadWidth+1,gridStartHead:]**2)), cmap='seismic')
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridStartHeadWidth+1,gridStartHead:]**2 + 
+                                              DisY[:,gridStartHeadWidth+1,gridStartHead:]**2 + 
+                                              DisZ[:,gridStartHeadWidth+1,gridStartHead:]**2)), cmap='seismic')
             plt.savefig(imFolder+'HeadStart/HS'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)   
            
             
             fig=plt.figure()
-            plt.contourf(np.transpose(np.sqrt(DisX[:,gridEndHeadWidth-1,gridStartHead:]**2 + DisY[:,gridEndHeadWidth-1,gridStartHead:]**2 + DisZ[:,gridEndHeadWidth-1,gridStartHead:]**2)), cmap='seismic')
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridEndHeadWidth-1,gridStartHead:]**2 + 
+                                              DisY[:,gridEndHeadWidth-1,gridStartHead:]**2 + 
+                                              DisZ[:,gridEndHeadWidth-1,gridStartHead:]**2)), cmap='seismic')
             plt.savefig(imFolder+'HeadEnd/HE'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)   
            
             
             fig=plt.figure()
-            plt.contourf(np.transpose(np.sqrt(DisX[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2 + DisY[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2 + DisZ[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2)), cmap='seismic')
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2 + 
+                                              DisY[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2 + 
+                                              DisZ[:,gridStartWeb+1,gridEndFoot:gridStartHead]**2)), cmap='seismic')
             plt.savefig(imFolder+'WebStart/WS'+str(t).zfill(5)+'.png')
             # SideRub vs TopHit for which case
             plt.close(fig)   
            
             
             fig=plt.figure()
-            plt.contourf(np.transpose(np.sqrt(DisX[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2 + DisY[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2 + DisZ[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2)), cmap='seismic')
+            plt.contourf(np.transpose(np.sqrt(DisX[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2 + 
+                                              DisY[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2 + 
+                                              DisZ[:,gridEndWeb-1,gridEndFoot:gridStartHead]**2)), cmap='seismic')
             plt.savefig(imFolder+'WebEnd/WE'+str(t).zfill(5)+'.png')
-            # SideRub vs TopHit for which case
             plt.close(fig)   
-        '''
+        
+        if CSVs == True:
+        
+            writeFile.write(str(t)+","
+                             +str(FSignal[-1][0])+","+str(FSignal[-1][1])+","+str(FSignal[-1][2])+","
+                             +str(BSignal[-1][0])+","+str(BSignal[-1][1])+","+str(BSignal[-1][2])+","
+                             +str(USignal[-1][0])+","+str(USignal[-1][1])+","+str(USignal[-1][2])+","
+                             +str(DSignal[-1][0])+","+str(DSignal[-1][1])+","+str(DSignal[-1][2])+","
+                             +str(RSignal[-1][0])+","+str(RSignal[-1][1])+","+str(RSignal[-1][2])+","
+                             +str(LSignal[-1][0])+","+str(LSignal[-1][1])+","+str(LSignal[-1][2])+","
+                             +str(MSignal[-1][0])+","+str(MSignal[-1][1])+","+str(MSignal[-1][2])
+                             +"\n"
+                            )
+        
+            for x in range(np.shape(DisX)[0]):
+                for y in range(np.shape(DisX)[1]):
+                    for z in range(np.shape(DisX)[2]):
+                        if matBCall[x,y,z] == 1:
+                            AnimationData.write(str(t)+","+str(x)+","+str(y)+","+str(z)+","
+                                                +str(np.sqrt(DisX[x,y,z]**2+DisY[x,y,z]**2+DisZ[x,y,z]**2))+","
+                                                +str(DisX[x,y,z])+","+str(DisY[x,y,z])+","+str(DisZ[x,y,z])
+                                                +"\n")
+        
             
-        if t%SaveSize == 0:
+        if Pickles == True and t%SaveSize == 0:
             file=open(imFolder+'MovementsR2MM'+str(j).zfill(3)+'.p','wb')
             pickle.dump([Movements, MovementsX, MovementsY, MovementsZ],file)
             file.close()
@@ -1030,181 +1037,183 @@ for t in range(0,Tsteps):
     if (myid == 0 ):
         print(t,'/',Tsteps-1,'checksums vx, sxx:',ckvs,ckss, int((time.time()-stime)/60.0*100)/100)
     sys.stdout.flush()
-'''
-if (myid == signalLocxid) :
-    plt.clf()
-    plt.plot(vxSignal)
-    plt.savefig('vxsignal.png')
 
-if (myid == signalLocxid) :
-    plt.clf()
-    plt.plot(vySignal)
-    plt.savefig('vysignal.png')
+if Images == True:
+    if (myid == signalLocxid) :
+        plt.clf()
+        plt.plot(vxSignal)
+        plt.savefig('vxsignal.png')
 
-if (myid == signalLocxid) :
-    plt.clf()
-    plt.plot(vzSignal)
-    plt.savefig('vzsignal.png')
-'''
+    if (myid == signalLocxid) :
+        plt.clf()
+        plt.plot(vySignal)
+        plt.savefig('vysignal.png')
+
+    if (myid == signalLocxid) :
+        plt.clf()
+        plt.plot(vzSignal)
+        plt.savefig('vzsignal.png')
+
 
 
 if myid ==0:
     #print(MidMatrix)
     
         
-    file=open(imFolder+'MovementsR2MM'+str(j).zfill(3)+'.p','wb')
-    pickle.dump([Movements[:,:,:,:Tsteps%SaveSize], MovementsX[:,:,:,:Tsteps%SaveSize], 
-                 MovementsY[:,:,:,:Tsteps%SaveSize], MovementsZ[:,:,:,:Tsteps%SaveSize]],file) 
-    #don't save the trailing bad data from the last
-    file.close()
+    if Pickels == True:
+        file=open(imFolder+'MovementsR2MM'+str(j).zfill(3)+'.p','wb')
+        pickle.dump([Movements[:,:,:,:Tsteps%SaveSize], MovementsX[:,:,:,:Tsteps%SaveSize], 
+                     MovementsY[:,:,:,:Tsteps%SaveSize], MovementsZ[:,:,:,:Tsteps%SaveSize]],file) 
+        #don't save the trailing bad data from the last
+        file.close()
+
+        file=open(imFolder+'MinMax.p','wb')
+        pickle.dump(MinMax, file) 
+        file.close()
     
-    file=open(imFolder+'MinMax.p','wb')
-    pickle.dump(MinMax, file) 
-    file.close()
+    if CSVs == True:
+        del MovementsX
+        del MovementsY
+        del MovementsZ
+
+        del DisX
+        del DisY
+        del DisZ
     
-    '''
-    del MovementsX
-    del MovementsY
-    del MovementsZ
-    
-    del DisX
-    del DisY
-    del DisZ
-    
-    #MidMatrixX = np.matrix(MidMatrixX)
-    #MidMatrixY = np.matrix(MidMatrixY)
-    #MidMatrixZ = np.matrix(MidMatrixZ)
-    writeFile.close()
+        #MidMatrixX = np.matrix(MidMatrixX)
+        #MidMatrixY = np.matrix(MidMatrixY)
+        #MidMatrixZ = np.matrix(MidMatrixZ)
+        writeFile.close()
     
         # %%
-    import multiprocessing
-    from joblib import Parallel, delayed
-    num_jobs=30
+    if Images == True:
+        import multiprocessing
+        from joblib import Parallel, delayed
+        num_jobs=30
 
-    # %%
-    def EnergyFig(t, xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder, v, figH):
+        # %%
+        def EnergyFig(t, xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder, v, figH):
 
-        fig = plt.figure(figsize=(6,figH), dpi=300)
+            fig = plt.figure(figsize=(6,figH), dpi=300)
 
-        Image = Movements[xStart:xEnd, yStart:yEnd, zStart:zEnd,t].T
+            Image = Movements[xStart:xEnd, yStart:yEnd, zStart:zEnd,t].T
 
-        x,y,z = np.shape(Image)
-        if x ==1:
-            I2 = np.squeeze(Image, axis=(0,))
-        if y ==1:
-            I2 = np.squeeze(Image, axis=(1,))
-        if z ==1:
-            I2 = np.squeeze(Image, axis=(2,))
+            x,y,z = np.shape(Image)
+            if x ==1:
+                I2 = np.squeeze(Image, axis=(0,))
+            if y ==1:
+                I2 = np.squeeze(Image, axis=(1,))
+            if z ==1:
+                I2 = np.squeeze(Image, axis=(2,))
 
-        plt.contourf(I2, v, cmap=plt.cm.jet)
-        plt.savefig(imFolder+Folder+'/Energy'+str(t).zfill(5)+'.png')
-        plt.close(fig)
+            plt.contourf(I2, v, cmap=plt.cm.jet)
+            plt.savefig(imFolder+Folder+'/Energy'+str(t).zfill(5)+'.png')
+            plt.close(fig)
 
-    # %%
-    def AnimationBook(xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder):
+        # %%
+        def AnimationBook(xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder):
 
-        if xStart - xEnd == 0.0:
-            figH = 6 * (yEnd - yStart) / (zEnd-zStart)
-            xEnd+=1
-        elif yStart - yEnd == 0.0:
-            figH = 6 * (zEnd - zStart) / (xEnd-xStart)
-            yEnd+=1
-        elif zStart - zEnd == 0.0:
-            figH = 6 * (yEnd - yStart) / (xEnd-xStart)
-            zEnd+=1
-        else:
-            figH = 0
-
-        if figH==0:
-            print("Error, no Dimmension is a plane",yStart-yEnd)
-        else:
-            EMin = np.min(Movements[xStart:xEnd, yStart:yEnd, zStart:zEnd,:])
-            EMax = np.max(Movements[xStart:xEnd, yStart:yEnd, zStart:zEnd,:])
-            v = np.linspace(EMin, EMax, 30, endpoint=True)[0:20]
-
-            print('About to make frames for ',Folder)
-            temp = Parallel(n_jobs=num_jobs)(delayed(EnergyFig)(t, xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder,v,figH) for t in range(Tsteps))
-
-        
-
-
-    # %%
-    AnimationBook(0,xmax,gridStartWeb+1,gridStartWeb+1,gridEndFoot,gridStartHead,"WebStart")
-    # %%
-    plt.close('all')
-    AnimationBook(0,xmax,gridEndWeb-1,gridEndWeb-1,gridEndFoot,gridStartHead,"WebEnd")
-    # %%
-    plt.close('all')
-    AnimationBook(0,xmax,gridEndHeadWidth-1,gridEndHeadWidth-1,gridStartHead,zmax,"HeadEnd")
-    # %%
-    plt.close('all')
-    AnimationBook(0,xmax,gridStartHeadWidth+1,gridStartHeadWidth+1,gridStartHead,zmax,"HeadStart")
-    # %%
-    plt.close('all')
-    AnimationBook(0,xmax,gridStartHeadWidth,gridEndHeadWidth,zmax-3,zmax-3,"TopSurface")
-    # %%
-    plt.close('all')
-    AnimationBook(0,xmax,gridStartHeadWidth,gridStartHeadWidth,gridStartHead,zmax,"LeftSurface")
-    # %%
-    plt.close('all')
-    AnimationBook(0,xmax,gridStartWeb,gridStartWeb,gridEndFoot,gridStartHead,"RightSurface")
-    # %%
-    plt.close('all')
-    '''
-
-    
-    '''if np.shape(MidMatrixX)[0] == Tsteps:
-        MidMatrixX = MidMatrixX.T
-    
-    MidDisplace = np.zeros(np.shape(MidMatrixX))
-    
-    for i in range(np.shape(MidMatrixX)[0]):
-        for j in range(np.shape(MidMatrixX)[1]):
-            if j == 0:
-                MidDisplace[i,j]=MidMatrixX[i,j]*ts
+            if xStart - xEnd == 0.0:
+                figH = 6 * (yEnd - yStart) / (zEnd-zStart)
+                xEnd+=1
+            elif yStart - yEnd == 0.0:
+                figH = 6 * (zEnd - zStart) / (xEnd-xStart)
+                yEnd+=1
+            elif zStart - zEnd == 0.0:
+                figH = 6 * (yEnd - yStart) / (xEnd-xStart)
+                zEnd+=1
             else:
-                MidDisplace[i,j]=MidDisplace[i,j-1]+MidMatrixX[i,j]*ts
-      
-    pts = 8
-    rng = int(gl1/pts)-1
-    
-    print(pts, rng)
-    
-    fig = plt.figure(dpi=600, figsize=(6,4))
-    #for i in range(pts):
-    plt.plot(MidMatrixX[0,:],label=str('x0'))
-    plt.plot(MidMatrixY[0,:],label=str('y0'))
-    plt.plot(MidMatrixZ[0,:],label=str('z0'))
-    plt.plot(MidMatrixX[50,:],label=str('x50'))
-    plt.plot(MidMatrixY[50,:],label=str('y50'))
-    plt.plot(MidMatrixZ[50,:],label=str('z50'))
-    #    print(str(i*rng)
-    plt.title('Velocity')
-    plt.legend()
-    plt.savefig(imFolder+runName+'MidVelocities.png')
-    
-    plt.close(fig)
-    fig = plt.figure(dpi=600, figsize=(6,4))
-    for i in range(pts):
-        plt.plot(MidDisplace[i*rng,:],label=str(i*rng))
-    plt.legend()
-    plt.title('Displacement')
-    plt.savefig(imFolder+runName+'MidDisplacements.png')
+                figH = 0
 
-    plt.close(fig)
-    fig = plt.figure(dpi=600, figsize=(6,4))
-    for i in range(pts):
-        plt.plot(MidMatrixX[i*rng,:],label=str(i*rng))
-    plt.legend()
-    plt.title('Displacement')
-    plt.savefig(imFolder+runName+'MidVel.png')
+            if figH==0:
+                print("Error, no Dimmension is a plane",yStart-yEnd)
+            else:
+                EMin = np.min(Movements[xStart:xEnd, yStart:yEnd, zStart:zEnd,:])
+                EMax = np.max(Movements[xStart:xEnd, yStart:yEnd, zStart:zEnd,:])
+                v = np.linspace(EMin, EMax, 30, endpoint=True)[0:20]
+
+                print('About to make frames for ',Folder)
+                temp = Parallel(n_jobs=num_jobs)(delayed(EnergyFig)(t, xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder,v,figH) for t in range(Tsteps))
+
+
+
+
+        # %%
+        AnimationBook(0,xmax,gridStartWeb+1,gridStartWeb+1,gridEndFoot,gridStartHead,"WebStart")
+        # %%
+        plt.close('all')
+        AnimationBook(0,xmax,gridEndWeb-1,gridEndWeb-1,gridEndFoot,gridStartHead,"WebEnd")
+        # %%
+        plt.close('all')
+        AnimationBook(0,xmax,gridEndHeadWidth-1,gridEndHeadWidth-1,gridStartHead,zmax,"HeadEnd")
+        # %%
+        plt.close('all')
+        AnimationBook(0,xmax,gridStartHeadWidth+1,gridStartHeadWidth+1,gridStartHead,zmax,"HeadStart")
+        # %%
+        plt.close('all')
+        AnimationBook(0,xmax,gridStartHeadWidth,gridEndHeadWidth,zmax-3,zmax-3,"TopSurface")
+        # %%
+        plt.close('all')
+        AnimationBook(0,xmax,gridStartHeadWidth,gridStartHeadWidth,gridStartHead,zmax,"LeftSurface")
+        # %%
+        plt.close('all')
+        AnimationBook(0,xmax,gridStartWeb,gridStartWeb,gridEndFoot,gridStartHead,"RightSurface")
+        # %%
+        plt.close('all')
+        
+        if np.shape(MidMatrixX)[0] == Tsteps:
+            MidMatrixX = MidMatrixX.T
+
+        MidDisplace = np.zeros(np.shape(MidMatrixX))
+
+        for i in range(np.shape(MidMatrixX)[0]):
+            for j in range(np.shape(MidMatrixX)[1]):
+                if j == 0:
+                    MidDisplace[i,j]=MidMatrixX[i,j]*ts
+                else:
+                    MidDisplace[i,j]=MidDisplace[i,j-1]+MidMatrixX[i,j]*ts
+
+        pts = 8
+        rng = int(gl1/pts)-1
+
+        print(pts, rng)
+
+        fig = plt.figure(dpi=600, figsize=(6,4))
+        #for i in range(pts):
+        plt.plot(MidMatrixX[0,:],label=str('x0'))
+        plt.plot(MidMatrixY[0,:],label=str('y0'))
+        plt.plot(MidMatrixZ[0,:],label=str('z0'))
+        plt.plot(MidMatrixX[50,:],label=str('x50'))
+        plt.plot(MidMatrixY[50,:],label=str('y50'))
+        plt.plot(MidMatrixZ[50,:],label=str('z50'))
+        #    print(str(i*rng)
+        plt.title('Velocity')
+        plt.legend()
+        plt.savefig(imFolder+runName+'MidVelocities.png')
+
+        plt.close(fig)
+        fig = plt.figure(dpi=600, figsize=(6,4))
+        for i in range(pts):
+            plt.plot(MidDisplace[i*rng,:],label=str(i*rng))
+        plt.legend()
+        plt.title('Displacement')
+        plt.savefig(imFolder+runName+'MidDisplacements.png')
+
+        plt.close(fig)
+        fig = plt.figure(dpi=600, figsize=(6,4))
+        for i in range(pts):
+            plt.plot(MidMatrixX[i*rng,:],label=str(i*rng))
+        plt.legend()
+        plt.title('Displacement')
+        plt.savefig(imFolder+runName+'MidVel.png')
        
-    SaveData = np.concatenate((FSignal,BSignal), axis = 1)
-    SaveData = np.concatenate((SaveData,USignal), axis =1)
-    SaveData = np.concatenate((SaveData,DSignal), axis =1)
-    SaveData = np.concatenate((SaveData,RSignal), axis =1)
-    SaveData = np.concatenate((SaveData,LSignal), axis =1)
-    SaveData = np.concatenate((SaveData,MSignal), axis =1)
+    if CSVs == True:
+        SaveData = np.concatenate((FSignal,BSignal), axis = 1)
+        SaveData = np.concatenate((SaveData,USignal), axis =1)
+        SaveData = np.concatenate((SaveData,DSignal), axis =1)
+        SaveData = np.concatenate((SaveData,RSignal), axis =1)
+        SaveData = np.concatenate((SaveData,LSignal), axis =1)
+        SaveData = np.concatenate((SaveData,MSignal), axis =1)
+
+        np.savetxt(runName+'LaserPoints.csv',SaveData,delimiter=", ")
     
-    np.savetxt(runName+'LaserPoints.csv',SaveData,delimiter=", ")
-    '''

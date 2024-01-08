@@ -36,7 +36,7 @@ nprocs=mpi_size
 # set Constants
 AirCut = False
 RailShape = True
-figDPI = 600
+figDPI = 200
 
 #Dimmesnsion of simulation space in meters
 length1 = 3
@@ -84,7 +84,7 @@ elif FFunction ==4:
 elif FFunction == 5:
     imFolder += 'RailLong/'
 elif FFunction == 6:   #long rail, two wheel rubs
-    imFolder += 'Double2.5mB/'
+    imFolder += 'DoubleRedoLoop/'
 
 
 WheelLoad = 173000 #crane force in Neutons
@@ -120,7 +120,8 @@ gl1 = int(math.ceil(length1 / gs)) +1       #length
 gw1 = int(math.ceil(width1 / gs)) +1       #width
 gh1 = int(math.ceil(height1 / gs)) +1       #height
 
-print(gs, ts, gl1, gw1, gh1, Tsteps)
+if myid == 0:
+    print(gs, ts, gl1, gw1, gh1, Tsteps)
 
 # %%
 # Keep these as the global values
@@ -214,10 +215,11 @@ if FFunction == 1:
     
 elif FFunction == 2:
     pnodes = int(whlayer / 4)
-    contactLength = max(int(0.004 / gs),3)  #4 cm contact patch
+    contactLength = max(int(0.002 / gs),3)  #4 cm contact patch
 
-    signalLocation[0:contactLength,gridStartHeadWidth:gridStartHeadWidth+3, gridStartHead:] = 1
-    print(FFunction, contactLength, np.sum(signalLocation))
+    signalLocation[0:contactLength,gridStartHeadWidth:gridStartHeadWidth+3, gridStartHead:] = - 1
+    signalLocation[contactLength:2*contactLength,gridStartHeadWidth:gridStartHeadWidth+3, gridStartHead:] = 1
+    #print(FFunction, contactLength, np.sum(signalLocation))
 
     ## Find the share of the force per node for FF1
     
@@ -249,19 +251,26 @@ elif FFunction == 6:
     Wheel1Distance = 0.5 # wheel starts 1 meter down track
     Wheel1Start = int(Wheel1Distance / gs)
     
-    signalLocation[Wheel1Start:Wheel1Start+6,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
+    RubLength = int(0.002 / gs)
+    
+    signalLocation[Wheel1Start - RubLength:Wheel1Start,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
+    signalLocation[Wheel1Start-RubLength-1,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start - RubLength:Wheel1Start,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
 
-    signalLocation[Wheel1Start+6,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
-    signalLocation[Wheel1Start-1,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
-    signalLocation[Wheel1Start:Wheel1Start+6,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start:Wheel1Start+RubLength,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
+    signalLocation[Wheel1Start+RubLength+1,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start:Wheel1Start+RubLength,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
 
     sep = int(1.360/gs) # Wheel 2 is centered 1.36 meters from wheel 1
     
-    signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 1
+    signalLocation[Wheel1Start - RubLength + sep:Wheel1Start + sep,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
+    signalLocation[Wheel1Start-RubLength-1 + sep,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start - RubLength + sep:Wheel1Start + sep,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
 
-    signalLocation[Wheel1Start+6+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
-    signalLocation[Wheel1Start-1+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
-    signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridEndHeadWidth-3:gridEndHeadWidth-2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start + sep:Wheel1Start+RubLength + sep,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
+    signalLocation[Wheel1Start+RubLength+1 + sep,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start + sep:Wheel1Start+RubLength + sep,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
+
     
 
 SecificWheelLoad = WheelLoad / np.sum(signalLocation)
@@ -508,6 +517,9 @@ if (myid == 0):
     MidMatrixZ = np.zeros((gl1,Tsteps))
 
     Movements = np.zeros((gl1,gw1,gh1,Tsteps))
+    MovementsX = np.zeros((gl1,gw1,gh1,Tsteps))
+    MovementsY = np.zeros((gl1,gw1,gh1,Tsteps))
+    MovementsZ = np.zeros((gl1,gw1,gh1,Tsteps))
     DisX = np.zeros((gl1,gw1,gh1))
     DisY = np.zeros((gl1,gw1,gh1))
     DisZ = np.zeros((gl1,gw1,gh1))
@@ -578,157 +590,152 @@ signalloc=distBox(signalloc,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)
 
 # FUnctions
 def JBSU(x,y,z):
-    try:
-        if (matBCs[x,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y-1,z] == 2 or matBCs[x,y,z-1] == 2):
-            pass
-        else:
-            norm1=(1/gs)*(matLambda[x,y,z]+2*matMu[x,y,z])
-            norm2=(1/gs)*(matLambda[x,y,z])
+    #try:
+    if (matBCs[x,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y-1,z] == 2 or matBCs[x,y,z-1] == 2):
+        pass
+    else:
+        norm1=(1/gs)*(matLambda[x,y,z]+2*matMu[x,y,z])
+        norm2=(1/gs)*(matLambda[x,y,z])
 
-            ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
-            sxx[x,y,z]=sxx[x,y,z]+ds*ts
+        ds=norm1*(vx[x,y,z]-vx[x-1,y,z])+norm2*(vy[x,y,z]-vy[x,y-1,z]+vz[x,y,z]-vz[x,y,z-1])
+        sxx[x,y,z]=sxx[x,y,z]+ds*ts
 
-            ds=norm1*(vy[x,y,z]-vy[x,y-1,z])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vz[x,y,z]-vz[x,y,z-1])
-            syy[x,y,z]=syy[x,y,z]+ds*ts
+        ds=norm1*(vy[x,y,z]-vy[x,y-1,z])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vz[x,y,z]-vz[x,y,z-1])
+        syy[x,y,z]=syy[x,y,z]+ds*ts
 
-            ds=norm1*(vz[x,y,z]-vz[x,y,z-1])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vy[x,y,z]-vy[x,y-1,z])
-            szz[x,y,z]=szz[x,y,z]+ds*ts
+        ds=norm1*(vz[x,y,z]-vz[x,y,z-1])+norm2*(vx[x,y,z]-vx[x-1,y,z]+vy[x,y,z]-vy[x,y-1,z])
+        szz[x,y,z]=szz[x,y,z]+ds*ts
 
-        if (matBCs[x,y,z] == 2 or matBCs[x+1,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y+1,z] == 2 
-            or matBCs[x,y-1,z] == 2 or matBCs[x,y,z-1] == 2 or matBCs[x+1,y+1,z] == 2):
-            pass
-        else:
-            shearDenomxy=(1/matMu[x,y,z])+(1/matMu[x+1,y,z])+(1/matMu[x,y+1,z])+(1/matMu[x+1,y+1,z])
-            shearxy=4*(1/gs)*(1/shearDenomxy)
-            ds=shearxy*(vx[x,y+1,z]-vx[x,y,z]+vy[x+1,y,z]-vy[x,y,z])
-            sxy[x,y,z]=sxy[x,y,z]+ds*ts
+    if (matBCs[x,y,z] == 2 or matBCs[x+1,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y+1,z] == 2 
+        or matBCs[x,y-1,z] == 2 or matBCs[x,y,z-1] == 2 or matBCs[x+1,y+1,z] == 2):
+        pass
+    else:
+        shearDenomxy=(1/matMu[x,y,z])+(1/matMu[x+1,y,z])+(1/matMu[x,y+1,z])+(1/matMu[x+1,y+1,z])
+        shearxy=4*(1/gs)*(1/shearDenomxy)
+        ds=shearxy*(vx[x,y+1,z]-vx[x,y,z]+vy[x+1,y,z]-vy[x,y,z])
+        sxy[x,y,z]=sxy[x,y,z]+ds*ts
 
-        if (matBCs[x,y,z] == 2 or matBCs[x+1,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y,z+1] == 2 
-            or matBCs[x,y,z-1] == 2 or matBCs[x,y-1,z] == 2 or matBCs[x+1,y,z+1] == 2):
-            pass
-        else:
-            shearDenomxz=(1/matMu[x,y,z])+(1/matMu[x+1,y,z])+(1/matMu[x,y,z+1])+(1/matMu[x+1,y,z+1])
-            shearxz=4*(1/gs)*(1/shearDenomxz)
-            ds=shearxz*(vx[x,y,z+1]-vx[x,y,z]+vz[x+1,y,z]-vz[x,y,z])
-            sxz[x,y,z]=sxz[x,y,z]+ds*ts   
+    if (matBCs[x,y,z] == 2 or matBCs[x+1,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y,z+1] == 2 
+        or matBCs[x,y,z-1] == 2 or matBCs[x,y-1,z] == 2 or matBCs[x+1,y,z+1] == 2):
+        pass
+    else:
+        shearDenomxz=(1/matMu[x,y,z])+(1/matMu[x+1,y,z])+(1/matMu[x,y,z+1])+(1/matMu[x+1,y,z+1])
+        shearxz=4*(1/gs)*(1/shearDenomxz)
+        ds=shearxz*(vx[x,y,z+1]-vx[x,y,z]+vz[x+1,y,z]-vz[x,y,z])
+        sxz[x,y,z]=sxz[x,y,z]+ds*ts   
 
-        if (matBCs[x,y,z] == 2 or matBCs[x,y,z+1] == 2 or matBCs[x,y,z-1] == 2 or matBCs[x,y+1,z] == 2 
-            or matBCs[x,y-1,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y+1,z+1] == 2):
-            pass
-        else:
-            shearDenomyz=(1/matMu[x,y,z])+(1/matMu[x,y+1,z])+(1/matMu[x,y,z+1])+(1/matMu[x,y+1,z+1])
-            shearyz=4*(1/gs)*(1/shearDenomyz)
-            ds=shearyz*(vy[x,y,z+1]-vy[x,y,z]+vz[x,y+1,z]-vz[x,y,z])
-            syz[x,y,z]=syz[x,y,z]+ds*ts
-    except:
-        print('Unrecognized BC stress', matBCall[myid*npx+x,y,z],x,y,z,myid)
+    if (matBCs[x,y,z] == 2 or matBCs[x,y,z+1] == 2 or matBCs[x,y,z-1] == 2 or matBCs[x,y+1,z] == 2 
+        or matBCs[x,y-1,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y+1,z+1] == 2):
+        pass
+    else:
+        shearDenomyz=(1/matMu[x,y,z])+(1/matMu[x,y+1,z])+(1/matMu[x,y,z+1])+(1/matMu[x,y+1,z+1])
+        shearyz=4*(1/gs)*(1/shearDenomyz)
+        ds=shearyz*(vy[x,y,z+1]-vy[x,y,z]+vz[x,y+1,z]-vz[x,y,z])
+        syz[x,y,z]=syz[x,y,z]+ds*ts
+    #except:
+    #    print('Unrecognized BC stress', matBCall[myid*npx+x,y,z],x,y,z,myid)
 
 
 # %%
 # %%
 def JBUV(x,y,z):
-    try:
-        if matBCs[x,y,z] == 0: 
-            dvxConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x+1,y,z]))
-            dv=dvxConst*( sxx[x+1,y,z]-sxx[x,y,z]
-                         +sxy[x,y,z]-sxy[x,y-1,z]
-                         +sxz[x,y,z]-sxz[x,y,z-1])
-            vx[x,y,z]=vx[x,y,z]+dv*ts
-        #x at 0
-        elif (matBCs[x,y,z] ==2 or matBCs[x,y-1,z]==2 or matBCs[x,y,z-2]==2):
-            pass #requires elements out of the direction
-        elif matBCs[x+1,y,z] == 2:
-            vx[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((-2)*sxx[x,y,z])
+    #try:
+    if matBCs[x,y,z] == 0: 
+        dvxConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x+1,y,z]))
+        dv=dvxConst*( sxx[x+1,y,z]-sxx[x,y,z]
+                     +sxy[x,y,z]-sxy[x,y-1,z]
+                     +sxz[x,y,z]-sxz[x,y,z-1])
+        vx[x,y,z]=vx[x,y,z]+dv*ts
+    #x at 0
+    elif (matBCs[x,y,z] ==2 or matBCs[x,y-1,z]==2 or matBCs[x,y,z-2]==2):
+        pass #requires elements out of the direction
+    elif matBCs[x+1,y,z] == 2:
+        vx[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((-2)*sxx[x,y,z])
 
-        elif matBCs[x-1,y,z] ==2 :
-            vx[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((2)*sxx[x+1,y,z])
+    elif matBCs[x-1,y,z] ==2 :
+        vx[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((2)*sxx[x+1,y,z])
 
-        else:
-            dvxConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x+1,y,z]))
-            dv=dvxConst*( sxx[x+1,y,z]-sxx[x,y,z]
-                         +sxy[x,y,z]-sxy[x,y-1,z]
-                         +sxz[x,y,z]-sxz[x,y,z-1])
-            vx[x,y,z]=vx[x,y,z]+dv*ts
+    else:
+        dvxConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x+1,y,z]))
+        dv=dvxConst*( sxx[x+1,y,z]-sxx[x,y,z]
+                     +sxy[x,y,z]-sxy[x,y-1,z]
+                     +sxz[x,y,z]-sxz[x,y,z-1])
+        vx[x,y,z]=vx[x,y,z]+dv*ts
 
-        #Vy cases
-        if matBCs[x,y,z] == 0: 
-            dvyConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y+1,z]))
-            dv=dvyConst* ( sxy[x,y,z]-sxy[x-1,y,z]
-                          +syy[x,y+1,z]-syy[x,y,z]
-                          +syz[x,y,z]-syz[x,y,z-1])
-            vy[x,y,z]=vy[x,y,z]+dv*ts
-        #y = 0
-        elif (matBCs[x,y,z] ==2 or matBCs[x-1,y,z] == 2 or matBCs[x,y,z-1] == 2):
-            pass  #requires elements out of the direction
-        elif matBCs[x,y+1,z] == 2:
-            vy[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((-2)*syy[x,y,z])
-        elif matBCs[x,y-1,z] == 2:
-            vy[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((2)*syy[x,y+1,z])
-        else:
-            dvyConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y+1,z]))
-            dv=dvyConst* ( sxy[x,y,z]-sxy[x-1,y,z]
-                          +syy[x,y+1,z]-syy[x,y,z]
-                          +syz[x,y,z]-syz[x,y,z-1])
-            vy[x,y,z]=vy[x,y,z]+dv*ts
+    #Vy cases
+    if matBCs[x,y,z] == 0: 
+        dvyConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y+1,z]))
+        dv=dvyConst* ( sxy[x,y,z]-sxy[x-1,y,z]
+                      +syy[x,y+1,z]-syy[x,y,z]
+                      +syz[x,y,z]-syz[x,y,z-1])
+        vy[x,y,z]=vy[x,y,z]+dv*ts
+    #y = 0
+    elif (matBCs[x,y,z] ==2 or matBCs[x-1,y,z] == 2 or matBCs[x,y,z-1] == 2):
+        pass  #requires elements out of the direction
+    elif matBCs[x,y+1,z] == 2:
+        vy[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((-2)*syy[x,y,z])
+    elif matBCs[x,y-1,z] == 2:
+        vy[x,y,z] += 2 * ts/gs * 1/(2 * matDensity[x,y,z]) * ((2)*syy[x,y+1,z])
+    else:
+        dvyConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y+1,z]))
+        dv=dvyConst* ( sxy[x,y,z]-sxy[x-1,y,z]
+                      +syy[x,y+1,z]-syy[x,y,z]
+                      +syz[x,y,z]-syz[x,y,z-1])
+        vy[x,y,z]=vy[x,y,z]+dv*ts
 
-        #Vz cases
-        if matBCs[x,y,z] ==0:
-            dvzConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y,z+1]))
-            dv=dvzConst*( sxz[x,y,z]-sxz[x-1,y,z]
-                         +syz[x,y,z]-syz[x,y-1,z]
-                         +szz[x,y,z+1]-szz[x,y,z])
-            vz[x,y,z]=vz[x,y,z]+dv*ts
-        #z at 0
-        elif (matBCs[x,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y-1,z]==2):
-            pass
-        elif matBCs[x,y,z+1] == 2:
-            vz[x,y,z] += 2 * ts/gs *(1/(2 * matDensity[x,y,z])) * ((-2)*szz[x,y,z])
-        elif matBCs[z,y,z-1] == 2:
-            vz[x,y,z] += 2 * ts/gs *(1/(2 * matDensity[x,y,z])) * ((2)*szz[x,y,z+1])
-        else:
-            dvzConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y,z+1]))
-            dv=dvzConst*( sxz[x,y,z]-sxz[x-1,y,z]
-                         +syz[x,y,z]-syz[x,y-1,z]
-                         +szz[x,y,z+1]-szz[x,y,z])
-            vz[x,y,z]=vz[x,y,z]+dv*ts
-    except:
-        print('Unrecognized BC Vel', matBCall[myid*npx+x,y,z],x,y,z,myid)
+    #Vz cases
+    if matBCs[x,y,z] ==0:
+        dvzConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y,z+1]))
+        dv=dvzConst*( sxz[x,y,z]-sxz[x-1,y,z]
+                     +syz[x,y,z]-syz[x,y-1,z]
+                     +szz[x,y,z+1]-szz[x,y,z])
+        vz[x,y,z]=vz[x,y,z]+dv*ts
+    #z at 0
+    elif (matBCs[x,y,z] == 2 or matBCs[x-1,y,z] == 2 or matBCs[x,y-1,z]==2):
+        pass
+    elif matBCs[x,y,z+1] == 2:
+        vz[x,y,z] += 2 * ts/gs *(1/(2 * matDensity[x,y,z])) * ((-2)*szz[x,y,z])
+    elif matBCs[x,y,z-1] == 2:
+        vz[x,y,z] += 2 * ts/gs *(1/(2 * matDensity[x,y,z])) * ((2)*szz[x,y,z+1])
+    else:
+        dvzConst=2*(1/gs)*(1/(matDensity[x,y,z]+matDensity[x,y,z+1]))
+        dv=dvzConst*( sxz[x,y,z]-sxz[x-1,y,z]
+                     +syz[x,y,z]-syz[x,y-1,z]
+                     +szz[x,y,z+1]-szz[x,y,z])
+        vz[x,y,z]=vz[x,y,z]+dv*ts
+    #except:
+    #    print('Unrecognized BC Vel', matBCall[myid*npx+x,y,z],x,y,z,myid)
 
 
 
-if myid == 0:
+'''if myid == 0:
     print('starting')
     writeFile = open(imFolder + 'info.text','a')
-    writeFile.write(str(gl1)+', '+str(gh1)+', '+str(gw1)+', '+str(npx)+', '+str(np.shape(MatBCs)))
-    writeFile.close()
+    writeFile.write(str(gl1)+', '+str(gh1)+', '+str(gw1)+', '+str(npx)+', '+str(np.shape(matBCall)))
+    writeFile.close()'''
     
 # %%
-for t in range(Tsteps):
-     
-    if FFunction == 2:
+for t in range(0,Tsteps):
+    if FFunction ==2:
         vz += signalloc * sinInputSignal[t]
-        print(np.sum(vz))
-    
-    if FFunction ==3:
+    elif FFunction ==3:
         vx += signalloc * sinInputSignal[t]
-
-    if FFunction == 4:
-        vz += signalloc * sinInputSignal[t]
-
+    elif FFunction ==4:
+        vx += signalloc * sinInputSignal[t]
     elif FFunction ==5:
         vz -= signalloc * sinInputSignal[t]
     elif FFunction ==6:
         vz -= signalloc * sinInputSignal[t]
+        vx -= signalloc * sinInputSignal[t]
 
-        
-    for x in range(1,npx-1):
+
+    for x in range(1,npx):
         for y in range(0,ymax):
             for z in range(0,zmax):
                 JBSU(x,y,z)
 
-    
+
     # cut boundaries off of arrays
-    #Remove for Jupyter single processor
     sxxt=sxx[1:npx+1,:,:]
     syyt=syy[1:npx+1,:,:]
     szzt=szz[1:npx+1,:,:]
@@ -743,18 +750,37 @@ for t in range(Tsteps):
     sxy=distBox(sxyt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     sxz=distBox(sxzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
     syz=distBox(syzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
-    
-    
+
     #if the forcing function is a stress
     if FFunction == 1:
         szz -= signalloc * specificWheelLoad
 
-    for x in range(1,npx-1):
+
+    for x in range(1,npx):
         for y in range(0,ymax):
             for z in range(0,zmax):
                 JBUV(x,y,z)
 
-    
+        
+    # cut boundaries off of arrays
+    vxt=vx[1:npx+1,:,:]
+    vyt=vy[1:npx+1,:,:]
+    vzt=vz[1:npx+1,:,:]
+
+    # redistrubute ghost/boundary values
+    vx=distBox(vxt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+    vy=distBox(vyt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+    vz=distBox(vzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+
+    #record signals
+    if (myid==signalLocxid) :
+        vxSignal[t]=vx[signalLocxlocx,signalLocy,signalLocz]
+        vySignal[t]=vy[signalLocxlocx,signalLocy,signalLocz]
+        vzSignal[t]=vz[signalLocxlocx,signalLocy,signalLocz]
+
+    # save vx cut figure
+    # ADD GATHER for plotting
+
     vxg = np.zeros((gl1,gw1,gh1))
     vxt=vx[1:npx+1,:,:]        
     mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
@@ -784,6 +810,9 @@ for t in range(Tsteps):
         DisY += vyg[:,:,:] * ts
         DisZ += vzg[:,:,:] * ts
         Movements[:,:,:,t] = np.sqrt(DisX**2 + DisY**2 + DisZ**2)
+        MovementsX[:,:,:,t] = DisX
+        MovementsY[:,:,:,t] = DisY
+        MovementsZ[:,:,:,t] = DisZ
         
         if t%5==0:
         
@@ -837,14 +866,14 @@ for t in range(Tsteps):
             '''
 
     # Collect vx, sxx checksum contributions for printing
-    vxt=vx[1:npx+1,:,:]
+    vxt=vxg[1:npx+1,:,:]
     sxxt=sxx[1:npx+1,:,:]
 
     #ckvs=np.array(0.0,'d')
     #ckss=np.array(0.0,'d')
     
     ckv=np.sum(np.absolute(vxg))
-    cks=np.sum(np.absolute(sxx))
+    cks=np.sum(np.absolute(sxxt))
     #mpi_comm.Reduce(ckv,ckvs,op=MPI.SUM,root=0)
     #mpi_comm.Reduce(cks,ckss,op=MPI.SUM,root=0)
 
@@ -854,7 +883,18 @@ for t in range(Tsteps):
 
 # %%
 
-if (myid == 0 ):
+if (myid == 0):
+    
+    import pickle
+    
+    file=open('Movements.p','wb')
+    pickle.dump([Movements, MovementsX, MovementsY, MovementsZ],file)
+    file.close()
+    
+    del MovementsX
+    del MovementsY
+    del MovementsZ
+    
     vxDisplacement = [0]
     vyDisplacement = [0]
     vzDisplacement = [0]
@@ -1083,7 +1123,7 @@ if (myid == 0 ):
     # %%
     import multiprocessing
     from joblib import Parallel, delayed
-    num_jobs=19
+    num_jobs=30
 
     # %%
     def EnergyFig(t, xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder, v, figH):
@@ -1126,9 +1166,10 @@ if (myid == 0 ):
             EMax = np.max(Movements[xStart:xEnd, yStart:yEnd, zStart:zEnd,:])
             v = np.linspace(EMin, EMax, 30, endpoint=True)[0:20]
 
+            print('About to make frames for ',Folder)
             temp = Parallel(n_jobs=num_jobs)(delayed(EnergyFig)(t, xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder,v,figH) for t in range(Tsteps))
 
-
+        
 
 
     # %%
