@@ -70,7 +70,14 @@ else:
 # ## Load data
 
 # %%
-Case = '20m15XRfRq'
+Case = 'BounceTest'
+#
+#            Done: 'FlawTest1'
+#                  '20m10xTopHit'
+#                  'FlawTest0'
+#                  'FlawTest15a0'
+#                  'FlawTest15a1'
+#                  '20m10xTopHitForReal'
 CasesAtaTime = 2
 FilesAtTime = 5
 ProcessPerFile = 5
@@ -102,9 +109,16 @@ gridStartHead = Parameters["HeightStartHeadNode"]
 gridStartHeadWidth = Parameters["WidthStartHeadNode"]
 gridEndHeadWidth = Parameters["WidthEndHeadNode"]
 DataBucketSize = Parameters["SaveEveryXStep"]
+gridFreq = Parameters["GridDesignFrequency"]
 
 # %%
-Parameters
+if gridFreq == 49720:
+    skips = 10
+elif gridFreq == 74574:
+    skips = 15
+else:
+    skips = 1
+
 
 # %% [markdown]
 # ## Image making functions
@@ -345,6 +359,46 @@ DataCases = {
                        'zend'     : zmax,
                        'Position' : 1
                       },
+             'MiddleVerticalPlanex': {
+                       'name'     : 'MiddleVerticalPlanex',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : int(ymax/2),
+                       'yend'     : int(ymax/2),
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 1
+                      },
+             'MiddleVerticalPlaney': {
+                       'name'     : 'MiddleVerticalPlaney',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : int(ymax/2),
+                       'yend'     : int(ymax/2),
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 2
+                      },
+             'MiddleVerticalPlanez': {
+                       'name'     : 'MiddleVerticalPlanez',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : int(ymax/2),
+                       'yend'     : int(ymax/2),
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 3
+                      },
+             'MiddleVerticalPlaneE': {
+                       'name'     : 'MiddleVerticalPlaneE',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : int(ymax/2),
+                       'yend'     : int(ymax/2),
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 0
+                      },
              'RightHead': {
                        'name'     : 'RightHead',
                        'xstart'   : 0,
@@ -356,6 +410,7 @@ DataCases = {
                        'Position' : 1
                       },
              'EndM6': {
+                       'name'     : 'EndM6',
                        'xstart'   : xmax - 6,
                        'xend'     : xmax - 6,
                        'ystart'   : 0,
@@ -365,6 +420,7 @@ DataCases = {
                        'Position' : 0
                       },
              'HeadStart': {
+                       'name'     : 'HeadStart',
                        'xstart'   : 0,
                        'xend'     : xmax ,
                        'ystart'   : gridStartHeadWidth+1,
@@ -374,6 +430,7 @@ DataCases = {
                        'Position' : 0
                       },
              'MiddleHeadPlane': {
+                       'name'     : 'MiddleHeadPlane',
                        'xstart'   : 0,
                        'xend'     : xmax ,
                        'ystart'   : 0,
@@ -383,6 +440,7 @@ DataCases = {
                        'Position' : 1
                       },
              'MiddleWebPlane': {
+                       'name'     : 'MiddleWebPlane',
                        'xstart'   : 0,
                        'xend'     : xmax ,
                        'ystart'   : gridStartWeb,
@@ -392,6 +450,7 @@ DataCases = {
                        'Position' : 1
                       },
              'MiddleVerticalPlane': {
+                       'name'     : 'MiddleVerticalPlane',
                        'xstart'   : 0,
                        'xend'     : xmax ,
                        'ystart'   : int(ymax/2),
@@ -407,9 +466,10 @@ DataCases = {
 stime = time.time()
 
 for entry in DataCases:
-    job = entry['name']
+    job = DataCases[entry]['name']
 
-    Data = getStackData(DataCases[job],15)
+
+    Data = getStackData(DataCases[job],skips)
 
     file=open(imFolder+'Data-'+job+'.p','wb')
     pickle.dump(Data,file)

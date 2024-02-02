@@ -1,0 +1,11 @@
+#!/bin/tcsh
+#PBS -N RunRestart_20m10XRfRq
+#PBS -l nodes=30:bora:ppn=20
+#PBS -l walltime=72:00:00
+#PBS -k oe
+
+
+cd $PBS_O_WORKDIR
+
+conda activate mpi
+mpiexec -np 600 python3 -u Rail-RestartRun.py y >& RunRestart_20m10XRfRq.out

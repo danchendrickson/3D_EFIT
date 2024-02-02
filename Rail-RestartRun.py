@@ -23,57 +23,40 @@ nprocs=mpi_size
 if myid==0:
     print("started")
 
+RunFolder = '/sciclone/scr10/dchendrickson01/EFIT/20m10XRfRq/'
+    
+fileName = RunFolder+'Parameters.p'
+
+file=open(fileName,'rb')
+Parameters=pickle.load(file)
+
+file.close()
+
+
 # set Constants
-AirCut = False
-RailShape = True
-Flaw = False
-Absorbing = False
-
-#Dimmesnsion of simulation space in meters
-length1 = 20
-width1 = 0.1524 # 0.1524
-height1 = 0.1524
-
-#Image Folder
-imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = '20m Rail At 10x long for 1k FP Top Hit'
-
-#is the rail supported by 0, 1 or 2 ties
-Ties = 0
-
-FlawType = 0
-# 0 for none, 1 for notch, 2 for crack in head
-
-#Choose ferquency to be used for excitment
-frequency = 49720  #brute forced this number to be where simulation frequency 
-#            49720  is 2,000,000, alowing for %10 to equal laser 200k same as actual
-#            74574  is 3,000,000 hz running, and sample rate %15 is 200k same as actual, if we need more dense
-Signalfrequency = 16300
-
-SaveSize = 150  #100 for 15, 150 for 10x: experimentally found for where we don't run out of memory.
-
-cycles = 60
-
-figDPI = 600
-
-#Forcing Function Location and type
-# 1 for dropped wheel on top toward start
-# 2 for rubbing flange on side
-# 3 for plane wave from end
-# 4 is square patch rail 20% down
-# 5 is a dropped wheel on the mid point
-# 6 for two rubbing flanges, one on each side
-
-FFunction = 1
-
-Wheel1Distance = 15.2 # wheel starts X meter down track
-# use 15.2 for 20m to maximize good reading time
-WheelLoad = 173000 #crane force in Neutons
-
-#MATERIAL 1 ((steel))
-pRatio1 = 0.29                                    #poission's ratio in 
-yModulus1 = 200 * (10**9)                           #youngs modulus in pascals
-rho1 = 7800                                        #density in kg/m^3
+AirCut = Parameters['AirCut']
+RailShape = Parameters['RailShape']
+Flaw = Parameters['Flaw']
+try: 
+    Absorbing = Parameters['Absorbing']
+else: 
+    Absorbing = False
+length1 = Parameters['Length']
+width1 = Parameters['Width']
+height1 = Parameters['Height']
+imFolder = RunFolder
+runName = Parameters['RunTitle']
+Ties = Parameters['TiesIncluded']
+frequency = Parameters['GridDesignFrequency']
+Signalfrequency = Parameters['InputSignalFrequency']
+SaveSize = Parameters['SaveEveryXStep']
+cycles = Parameters['SimulationCycleLength']
+FFunction = Parameters['ForcingFuctionNumber']
+Wheel1Distance = Parameters['Wheel1Start']
+WheelLoad = Parameters['PerWheelForce']
+pRatio1 = Parameters['PoisonsRatio']
+yModulus1 = Parameters['YoungsModulous']
+rho1 = Parameters['Density']
 
 
 #CALCULATED PARAMETERS FROM INPUTS
@@ -88,29 +71,6 @@ ct1 = np.sqrt(mu1/rho1)
 omegaL1 = cl1 / frequency
 omegaT1 = ct1 / frequency
 
-#Image Folder
-if FFunction == 1:
-    imFolder += '20m10xTopHitForReal/'
-elif FFunction == 2:
-    imFolder += 'Temp/'
-elif FFunction == 3:
-    imFolder += 'BiggerAcTii/'
-elif FFunction == 4:
-    imFolder += 'BiggerAcTii/'
-elif FFunction == 5:
-    imFolder += 'RailLong/'
-elif FFunction == 6:   #long rail, two wheel rubs
-    imFolder += '20m10XRfRq/'
-
-if myid==0:
-    if os.path.isdir(imFolder):
-        pass
-    else:
-        os.makedirs(imFolder)
-
-
-#Set time step and grid step to be 10 steps per frequency and ten steps per wavelength respectively
-#ts = 1 / frequency / 10    #time step
 gs = (min(omegaL1, omegaT1) /12)    #grid step, omegaL2,omegaT2
 ts = gs/((max(cl1,ct1))*(np.sqrt(3)))*0.95 #time step, cl2,ct2
 
@@ -130,6 +90,7 @@ GoodDataPints = (FalseWaveTravelTime - FirstWheelTransverseFirstReflectionTime) 
 #Tsteps = int(math.ceil(runtime / ts)) + 1       #total Time Steps
 
 Tsteps = StepsTillHit + 200  #calculated spereately for needed space to get reflections
+Tsteps = 2 * SaveSize
 
 runtime = Tsteps * ts
 
@@ -173,11 +134,6 @@ if myid == 0:
     print('runtime (s), time step size (s), total # of time steps:', runtime, ts, Tsteps)
     print('grid step size, # of length pts, # of height pts, # of width pts, gl1 loc pts:', gs,gl1,gw1,gh1,npx)
 
-#tensor to store material properties for each point
-#0 index is density
-#1 index is first Lame Parmaeter
-#2 index is second lame parameter
-
 #MPI EJW Section 2 changes
 matDensityAll=np.zeros((gl1,gw1,gh1))
 matLambdaAll=np.zeros((gl1,gw1,gh1))
@@ -207,7 +163,6 @@ relEndWeb = 0.5 + (relWeb / 2.0)
 relStartHeadWidth = 0.5 - (relHeadWidth / 2.0)
 relEndHeadWidth = 0.5 + (relHeadWidth / 2.0)
 
-
 gridStartHead = round((gh1-3) * relStartHeadThick) + 1
 gridStartWeb = round((gw1-3) * relStartWeb)  + 1
 gridEndWeb = round((gw1-3) * relEndWeb)  + 1
@@ -236,8 +191,8 @@ if FFunction == 1:
 
     temp2 = np.moveaxis(temp2,-1,0)
     temp2 = np.moveaxis(temp2,1,-1)
-    
-    signalLocation[Wheel1Start - (6 * sigma) : Wheel1Start + (6 * sigma)+1,gridStartHeadWidth:gridEndHeadWidth, -3:] = temp2
+
+    signalLocation[Wheel1Start - (6 * sigma) : Wheel1Start +(6 * sigma)+1,gridStartHeadWidth:gridEndHeadWidth, -3:] = temp2
     
     del temp2
     
@@ -475,42 +430,34 @@ def setRailBCs(matBCs):
     
     return matBCs
 
-def MakeFlaw(matBCs, FlawType = 1):
-    if FlawType ==1:
-        #notch in plate
-        MidPoint = int(gl1/2)
-        StartTrans = int(gl1/5)*2
-        EndTrans = int(gl1/5)*3
-
-        TransToEnd = gl1-EndTrans
-        MidTransToEnd = int(TransToEnd/2)+EndTrans
-        QuarterTrans = int((EndTrans-StartTrans)/4)
-
-        StartFlawX = MidTransToEnd - QuarterTrans
-        EndFlawX = MidTransToEnd + QuarterTrans
-
-        StartFlawY = MidPoint - QuarterTrans
-        EndFlawY = MidPoint + QuarterTrans
-
-        VertFlaw = int(gh1/8)
-        VertStart = zmax - VertFlaw
-
-        #main hole
-        matBCs[StartFlawX:EndFlawX,StartFlawY:EndFlawY,VertStart:] = 2
-
-        #edges
-        matBCs[StartFlawX:EndFlawX,StartFlawY:EndFlawY,VertStart-1] = 1
-        matBCs[StartFlawX-1,StartFlawY-1:EndFlawY+1,VertStart:zmax-2]=1
-        matBCs[EndFlawX+1,StartFlawY-1:EndFlawY+1,VertStart:zmax-2]=1
-        matBCs[StartFlawX-1:EndFlawX+1,StartFlawY-1,VertStart:zmax-2]=1
-        matBCs[StartFlawX-1:EndFlawX+1,EndFlawY+1,VertStart:zmax-2]=1
-    elif FlawType ==2:
-        #crack in rail head
-        Wheel2StartPoint = int(1.360/gs) + Wheel1Start
-        StartPoint = int(Wheel2StartPoint+((xmax - Wheel2StartPoint)/2))
-        
-        MatBCs[StartPoint,gridStartHeadWidth:gridEndHeadWidth,zmax-int(0.01/gs):zmax-1] = 1
-        
+def MakeFlaw(matBCs):
+    MidPoint = int(gl1/2)
+    StartTrans = int(gl1/5)*2
+    EndTrans = int(gl1/5)*3
+    
+    TransToEnd = gl1-EndTrans
+    MidTransToEnd = int(TransToEnd/2)+EndTrans
+    QuarterTrans = int((EndTrans-StartTrans)/4)
+    
+    StartFlawX = MidTransToEnd - QuarterTrans
+    EndFlawX = MidTransToEnd + QuarterTrans
+    
+    StartFlawY = MidPoint - QuarterTrans
+    EndFlawY = MidPoint + QuarterTrans
+    
+    VertFlaw = int(gh1/8)
+    VertStart = zmax - VertFlaw
+    
+    #main hole
+    matBCs[StartFlawX:EndFlawX,StartFlawY:EndFlawY,VertStart:] = 2
+    
+    #edges
+    matBCs[StartFlawX:EndFlawX,StartFlawY:EndFlawY,VertStart-1] = 1
+    matBCs[StartFlawX-1,StartFlawY-1:EndFlawY+1,VertStart:zmax-2]=1
+    matBCs[EndFlawX+1,StartFlawY-1:EndFlawY+1,VertStart:zmax-2]=1
+    matBCs[StartFlawX-1:EndFlawX+1,StartFlawY-1,VertStart:zmax-2]=1
+    matBCs[StartFlawX-1:EndFlawX+1,EndFlawY+1,VertStart:zmax-2]=1
+    
     return matBCs
     
 
@@ -524,7 +471,7 @@ if RailShape:
 
 #Add Flaw
 if Flaw:
-    matBCall = MakeFlaw(matBCall, FlawType)
+    matBCall = MakeFlaw(matBCall)
 
 if myid == 0:
     print('air cuts made, line 310')
@@ -573,16 +520,34 @@ if Absorbing:
 # MPI EJW Section #4 changes 
 
 #initialize fields
-vx=np.zeros((npx+2,gw1,gh1))
-vy=np.zeros((npx+2,gw1,gh1))
-vz=np.zeros((npx+2,gw1,gh1))
 
-sxx=np.zeros((npx+2,gw1,gh1))
-syy=np.zeros((npx+2,gw1,gh1))
-szz=np.zeros((npx+2,gw1,gh1))
-sxy=np.zeros((npx+2,gw1,gh1))
-sxz=np.zeros((npx+2,gw1,gh1))
-syz=np.zeros((npx+2,gw1,gh1))
+file=open(imFolder+'CurrentState.p','wb')
+State=pickle.load(file)
+[startT,vxg,vyg,vzg,sxxg,syyg,szzg,sxyg,syzg,sxzg] = State
+file.close()
+
+del State
+
+mpi_comm.Scatterv([vxg,split,offset,MPI.DOUBLE], vx)
+mpi_comm.Scatterv([vyg,split,offset,MPI.DOUBLE], vy)
+mpi_comm.Scatterv([vzg,split,offset,MPI.DOUBLE], vz)
+mpi_comm.Scatterv([sxxg,split,offset,MPI.DOUBLE], sxx)
+mpi_comm.Scatterv([syyg,split,offset,MPI.DOUBLE], syy)
+mpi_comm.Scatterv([szzg,split,offset,MPI.DOUBLE], szz)
+mpi_comm.Scatterv([sxyg,split,offset,MPI.DOUBLE], sxy)
+mpi_comm.Scatterv([syzg,split,offset,MPI.DOUBLE], sxz)
+mpi_comm.Scatterv([sxzg,split,offset,MPI.DOUBLE], syz)
+
+
+vx=distBox(vx,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+vy=distBox(vy,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+vz=distBox(vz,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+sxx=distBox(sxx,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+syy=distBox(syy,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+szz=distBox(szz,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)   
+sxy=distBox(sxy,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+sxz=distBox(sxz,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
+syz=distBox(syz,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)   
 
 
 #record the signal at a specified location
@@ -701,67 +666,17 @@ if (myid == 0) :
     DisY = np.zeros((gl1,gw1,gh1))
     DisZ = np.zeros((gl1,gw1,gh1))
     
-    
-    Parameters = {"AirCut" : AirCut,
-                  "RailShape":  RailShape,
-                  "Flaw" : Flaw,
-                  "Length" : length1,
-                  "Width" : width1,
-                  "Height" : height1,
-                  "SaveFolder" : imFolder,
-                  "RunTitle" : runName,
-                  "TiesIncluded" : Ties,
-                  "GridDesignFrequency" : frequency,
-                  "InputSignalFrequency" : Signalfrequency,
-                  "SimulationCycleLength" : cycles,
-                  "ForcingFuctionNumber" : FFunction,
-                  "PerWheelForce" : WheelLoad,
-                  "PoisonsRatio" : pRatio1,
-                  "YoungsModulous" : yModulus1,
-                  "MaterialDensity" : rho1,
-                  "LongitudinalWaveSpeed" : cl1,
-                  "TransverseWaveSpeeed" : ct1,
-                  "TimeStep" : ts,
-                  "RunTime" : runtime,
-                  "TimeStepsSimLength" : Tsteps,
-                  "GridLengthNodes" : gl1,
-                  "GridWidthNodes" : gw1,
-                  "GridHeightNodes" : gh1,
-                  "LargestXnode" : xmax,
-                  "LargestYnode" : ymax,
-                  "LargestZnode" : zmax,
-                  "SaveEveryXStep" : SaveSize,
-                  "HeightStartHeadNode" : gridStartHead,
-                  "WidthStartWebNode" : gridStartWeb,
-                  "WidthEndWebNode" : gridEndWeb,
-                  "HeightEndFootNode" : gridEndFoot,
-                  "WidthStartHeadNode" : gridStartHeadWidth,
-                  "WidthEndHeadNode" : gridEndHeadWidth,
-                  "AbsorberLengthNodes" : AbsorptionRange,
-                  "AbsorptionPerNode" : StepAbsorption,
-                  "ExpectedGoodData" : GoodDataPints,
-                  "FlawType" : FlawType
-                 }
-                  
-    file=open(imFolder+'Parameters.p','wb')
-    pickle.dump(Parameters,file)
-    file.close()
-    
-    print(Parameters)
-    
-    del Parameters
-    
     MinMax = np.zeros((4,2))
     
     j=0
-
+    
 stime = time.time()
 
 DisX = np.zeros((gl1,gw1,gh1))
 DisY = np.zeros((gl1,gw1,gh1))
 DisZ = np.zeros((gl1,gw1,gh1))
 
-for t in range(0,Tsteps):
+for t in range(startT,Tsteps):
     if FFunction == 1:
         vz -= signalloc * specificWheelLoad / rho1 * ts
     elif FFunction ==2:
@@ -774,6 +689,7 @@ for t in range(0,Tsteps):
         vz -= signalloc * sinInputSignal[t]
     elif FFunction ==6:
         vz -= signalloc * sinInputSignal[t]
+
 
     for x in range(1,npx+1):
         for y in range(0,ymax):
@@ -798,6 +714,7 @@ for t in range(0,Tsteps):
     syz=distBox(syzt,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)        
 
     #if the forcing function is a stress
+
 
     for x in range(1,npx+1):
         for y in range(0,ymax):
@@ -827,44 +744,18 @@ for t in range(0,Tsteps):
     # ADD GATHER for plotting
 
     
-    vxg = np.zeros((gl1,gw1,gh1))
-    vxt=vx[1:npx+1,:,:]        
-    mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
-
-    vzg = np.zeros((gl1,gw1,gh1))
-    vzt=vz[1:npx+1,:,:]        
-    mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
-
-    vyg = np.zeros((gl1,gw1,gh1))
-    vyt=vy[1:npx+1,:,:]        
-    mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])
-
-    if t%SaveSize == 0:
-        sxxg = np.zeros((gl1,gw1,gh1))
-        sxxt=vx[1:npx+1,:,:]        
-        mpi_comm.Gatherv(sxxt,[sxxg,split,offset,MPI.DOUBLE])
-
-        syyg = np.zeros((gl1,gw1,gh1))
-        syyt=vz[1:npx+1,:,:]        
-        mpi_comm.Gatherv(syyt,[syyg,split,offset,MPI.DOUBLE])
-
-        szzg = np.zeros((gl1,gw1,gh1))
-        szzt=vy[1:npx+1,:,:]        
-        mpi_comm.Gatherv(szzt,[szzg,split,offset,MPI.DOUBLE])
-
-        sxyg = np.zeros((gl1,gw1,gh1))
-        sxyt=vx[1:npx+1,:,:]        
-        mpi_comm.Gatherv(sxyt,[sxyg,split,offset,MPI.DOUBLE])
-
-        syzg = np.zeros((gl1,gw1,gh1))
-        syzt=vz[1:npx+1,:,:]        
-        mpi_comm.Gatherv(syzt,[syzg,split,offset,MPI.DOUBLE])
-
-        sxzg = np.zeros((gl1,gw1,gh1))
-        sxzt=vy[1:npx+1,:,:]        
-        mpi_comm.Gatherv(sxzt,[sxzg,split,offset,MPI.DOUBLE])
-    
     if myid==0:
+        vxg = np.zeros((gl1,gw1,gh1))
+        vxt=vx[1:npx+1,:,:]        
+        mpi_comm.Gatherv(vxt,[vxg,split,offset,MPI.DOUBLE])
+
+        vzg = np.zeros((gl1,gw1,gh1))
+        vzt=vz[1:npx+1,:,:]        
+        mpi_comm.Gatherv(vzt,[vzg,split,offset,MPI.DOUBLE])
+
+        vyg = np.zeros((gl1,gw1,gh1))
+        vyt=vy[1:npx+1,:,:]        
+        mpi_comm.Gatherv(vyt,[vyg,split,offset,MPI.DOUBLE])
         
         DisX += vxg[:,:,:] * ts
         DisY += vyg[:,:,:] * ts
@@ -873,12 +764,37 @@ for t in range(0,Tsteps):
         MovementsX[:,:,:,t%SaveSize] = DisX
         MovementsY[:,:,:,t%SaveSize] = DisY
         MovementsZ[:,:,:,t%SaveSize] = DisZ
+        
             
         if t%SaveSize == 0:
-            file=open(imFolder+'MovementsR2MM'+str(j).zfill(3)+'.p','wb')
+            file=open(imFolder+'MovementsR2MM'+str(j).zfill(4)+'.p','wb')
             pickle.dump([Movements, MovementsX, MovementsY, MovementsZ],file)
             file.close()
 
+            sxxg = np.zeros((gl1,gw1,gh1))
+            sxxt=vx[1:npx+1,:,:]        
+            mpi_comm.Gatherv(sxxt,[sxxg,split,offset,MPI.DOUBLE])
+
+            syyg = np.zeros((gl1,gw1,gh1))
+            syyt=vz[1:npx+1,:,:]        
+            mpi_comm.Gatherv(syyt,[syyg,split,offset,MPI.DOUBLE])
+
+            szzg = np.zeros((gl1,gw1,gh1))
+            szzt=vy[1:npx+1,:,:]        
+            mpi_comm.Gatherv(szzt,[szzg,split,offset,MPI.DOUBLE])
+
+            sxyg = np.zeros((gl1,gw1,gh1))
+            sxyt=vx[1:npx+1,:,:]        
+            mpi_comm.Gatherv(sxyt,[sxyg,split,offset,MPI.DOUBLE])
+
+            syzg = np.zeros((gl1,gw1,gh1))
+            syzt=vz[1:npx+1,:,:]        
+            mpi_comm.Gatherv(syzt,[syzg,split,offset,MPI.DOUBLE])
+
+            sxzg = np.zeros((gl1,gw1,gh1))
+            sxzt=vy[1:npx+1,:,:]        
+            mpi_comm.Gatherv(sxzt,[sxzg,split,offset,MPI.DOUBLE])
+            
             file=open(imFolder+'CurrentState.p','wb')
             pickle.dump([t,vxg,vyg,vzg,
                         sxxg,syyg,szzg,
@@ -888,6 +804,7 @@ for t in range(0,Tsteps):
             j+=1
 
             
+
     # Collect vx, sxx checksum contributions for printing
     vxt=vx[1:npx+1,:,:]
     sxxt=sxx[1:npx+1,:,:]

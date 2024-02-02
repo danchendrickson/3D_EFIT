@@ -36,7 +36,7 @@ height1 = 0.1524
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = '20m Rail At 10x long for 1k FP Top Hit'
+runName = '5m Rail At 15x long bounce test'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
@@ -45,12 +45,12 @@ FlawType = 0
 # 0 for none, 1 for notch, 2 for crack in head
 
 #Choose ferquency to be used for excitment
-frequency = 49720  #brute forced this number to be where simulation frequency 
+frequency = 74574  #brute forced this number to be where simulation frequency 
 #            49720  is 2,000,000, alowing for %10 to equal laser 200k same as actual
 #            74574  is 3,000,000 hz running, and sample rate %15 is 200k same as actual, if we need more dense
 Signalfrequency = 16300
 
-SaveSize = 150  #100 for 15, 150 for 10x: experimentally found for where we don't run out of memory.
+SaveSize = 100  #100 for 15, 150 for 10x: experimentally found for where we don't run out of memory.
 
 cycles = 60
 
@@ -61,10 +61,10 @@ figDPI = 600
 # 2 for rubbing flange on side
 # 3 for plane wave from end
 # 4 is square patch rail 20% down
-# 5 is a dropped wheel on the mid point
+# 5 is a dropped wheel with bounce
 # 6 for two rubbing flanges, one on each side
 
-FFunction = 1
+FFunction = 5
 
 Wheel1Distance = 15.2 # wheel starts X meter down track
 # use 15.2 for 20m to maximize good reading time
@@ -90,15 +90,15 @@ omegaT1 = ct1 / frequency
 
 #Image Folder
 if FFunction == 1:
-    imFolder += '20m10xTopHitForReal/'
+    imFolder += '20m15xTopHit1/'
 elif FFunction == 2:
     imFolder += 'Temp/'
 elif FFunction == 3:
-    imFolder += 'BiggerAcTii/'
+    imFolder += 'FlawTest15a1/'
 elif FFunction == 4:
     imFolder += 'BiggerAcTii/'
 elif FFunction == 5:
-    imFolder += 'RailLong/'
+    imFolder += 'BounceTestBigger/'
 elif FFunction == 6:   #long rail, two wheel rubs
     imFolder += '20m10XRfRq/'
 
@@ -265,10 +265,32 @@ elif FFunction == 4:
 
 elif FFunction == 5:
 
-    signalLocation[int(gl1/2)-5:int(gl1/2)+5,int(gw1/2)-5:int(gw1/2)+5,zmax-2] = 1
-    signalLocation[int(gl1/2)-5:int(gl1/2)+5,int(gw1/2)-5:int(gw1/2)+5,zmax-1] = 0.5
-    signalLocation[int(gl1/2)-5:int(gl1/2)+5,int(gw1/2)-5:int(gw1/2)+5,zmax-3] = 0.5
+    Wheel1Start = int(Wheel1Distance / gs)
     
+    sigma = 5 #5 node Stdnard devation
+    mu = 6 * sigma # Wheel1Start #center point
+    
+    bins=np.linspace(0, 12 * sigma, 12 * sigma+1)    
+    
+    NormDist = 1/(sigma * np.sqrt(2 * np.pi)) * np.exp( - (bins - mu)**2 / (2 * sigma**2) )
+    
+    temp = np.ones((gridEndHeadWidth - gridStartHeadWidth,len(bins)))
+    temp = NormDist * temp
+
+    temp2 = np.ones((3,gridEndHeadWidth - gridStartHeadWidth,len(bins)))
+    temp2 = temp * temp2
+
+    temp2 = np.moveaxis(temp2,-1,0)
+    temp2 = np.moveaxis(temp2,1,-1)
+    
+    signalLocation[Wheel1Start - (6 * sigma) : Wheel1Start + (6 * sigma)+1,gridStartHeadWidth:gridEndHeadWidth, -3:] = temp2
+    
+    del temp2
+    
+    specificWheelLoad = WheelLoad / np.sum(temp)
+
+    del temp
+
 
 elif FFunction == 6:
     
@@ -554,12 +576,25 @@ szzConst=2*ts/(gs*rho1)
 amp=100000
 if FFunction == 1:
     decayRate = 100000
+elif FFunction ==5:
+    decayRate = 50000
 else:
     decayRate= 0
 sinConst=ts*amp/rho1
 
 sinInputSignal=sinConst*np.sin(2*np.pi*Signalfrequency*timeVec)*np.exp(-decayRate*timeVec)
 #sinInputSignal[int(.1*Tsteps+1):] = 0
+
+if FFunction == 5:
+    start = int(0.1 * Tsteps)
+    end = Tsteps - start
+    sinInputSignal[start:] += sinInputSignal[:end]
+    if myid == 0:
+        fig = plt.figure()
+        plt.plot(sinInputSignal)
+        plt.savefig(imFolder+'signal.png')
+        plt.show()
+        plt.close()
 
 #Create End Damping to make asorbing boundary
 Absorber = np.ones((gl1,gw1,gh1))

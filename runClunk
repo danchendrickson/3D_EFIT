@@ -1,0 +1,11 @@
+#!/bin/tcsh
+#PBS -N BigRailRunClunk
+#PBS -l nodes=30:bora:ppn=20
+#PBS -l walltime=72:00:00
+#PBS -k oe
+
+
+cd $PBS_O_WORKDIR
+
+conda activate mpi
+mpiexec -np 600 python3 -u Rail-clunkLockBigRun15x.py y >& BigClunkFine-240121.out
