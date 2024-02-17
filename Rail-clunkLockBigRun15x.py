@@ -45,6 +45,7 @@ Ties = 0
 frequency = 74574  #brute forced this number to be where simulation frequency 
 #            49720  is 2,000,000, alowing for %10 to equal laser 200k same as actual
 #            74574  is 3,000,000 hz running, and sample rate %15 is 200k same as actual, if we need more dense
+#            99440  is 4,000,000 hz, so sample rate %20
 Signalfrequency = 16300
 
 SaveSize = 100  #100 for 15x, 150 for 10x: experimentally found for where we don't run out of memory.
@@ -712,6 +713,7 @@ if (myid == 0) :
                   "LongitudinalWaveSpeed" : cl1,
                   "TransverseWaveSpeeed" : ct1,
                   "TimeStep" : ts,
+                  "GridStep" : gs,
                   "RunTime" : runtime,
                   "TimeStepsSimLength" : Tsteps,
                   "GridLengthNodes" : gl1,

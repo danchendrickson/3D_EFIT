@@ -70,7 +70,7 @@ else:
 # ## Load data
 
 # %%
-Case = '20m15xTopHit'
+Case = 'ExtraBigTest'
 #
 #            Done: 'FlawTest1'
 #                  '20m10xTopHit'
@@ -81,11 +81,9 @@ Case = '20m15xTopHit'
 #                  'BounceTest'
 #                  '20m10XRfRq'
 #                  'BounceTestBigger'
-#                  'ExtraBigTest'
-#                  '20m15xTopHit2'
 CasesAtaTime = 1
-FilesAtTime = 5
-ProcessPerFile = 2
+FilesAtTime = 3
+ProcessPerFile = 1
 
 imFolder=rootfolder+Case+'/'
 fileNames = glob.glob(imFolder+'Movements*.p')
@@ -129,34 +127,48 @@ else:
 # ## Image making functions
 
 # %%
-def getFigData(fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd):
+def getFigData(fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd, Case=''):
     
-    file=open(fileName,'rb')
-    temp = pickle.load(file)
-    file.close()
-    
-    Data = temp[Position][:,:,:,0::skips]
-    
-    del temp
+    try:
+        file=open(fileName,'rb')
+        temp = pickle.load(file)
+        file.close()
+
+        Data = temp[Position][:,:,:,0::skips]
+
+        del temp
 
 
-    if xStart == xEnd:
-        ReturnData = Data[xStart,:,:,:]
-        ReturnData[:gridStartWeb-1,gridEndFoot+2:gridStartHead-2] = np.nan
-        ReturnData[:gridStartHeadWidth-1,gridStartHead-2:] = np.nan
-        ReturnData[gridEndWeb+2:,gridEndFoot+2:gridStartHead-1] = np.nan
-        ReturnData[gridEndHeadWidth+4:,gridStartHead-1:] = np.nan
-        
-    elif yStart == yEnd:
-        ReturnData = Data[:,yStart,:,:]
-    elif zStart == zEnd:
-        ReturnData = Data[:,:,zStart,:]
-    else:
-        print('Error no dimmension is a plane')
-        ReturnData = []
-        
-        
-    return ReturnData, int(fileName[-5:][:3])
+        if xStart == xEnd:
+            ReturnData = Data[xStart,:,:,:]
+            ReturnData[:gridStartWeb-1,gridEndFoot+2:gridStartHead-2] = np.nan
+            ReturnData[:gridStartHeadWidth-1,gridStartHead-2:] = np.nan
+            ReturnData[gridEndWeb+2:,gridEndFoot+2:gridStartHead-1] = np.nan
+            ReturnData[gridEndHeadWidth+4:,gridStartHead-1:] = np.nan
+
+        elif yStart == yEnd:
+            ReturnData = Data[:,yStart,:,:]
+        elif zStart == zEnd:
+            ReturnData = Data[:,:,zStart,:]
+        else:
+            print('Error no dimmension is a plane')
+            ReturnData = []
+
+        if Case != '':
+            if os.path.isdir(imFolder+'temp/'):
+                pass
+            else:
+                os.makedirs(imFolder)
+            
+            filename = imFoler+'temp/'+Case+fileName[-5:][:3]+'.p'
+            print(filename)
+            file = open(filename,'wb')
+            pickle.dump(ReturnData,file)
+            file.close()
+        else:
+            return ReturnData, int(fileName[-5:][:3])
+    except:
+        print('Failed on ',fileName)
 
 # %%
 def SimpleFig(Data, t, v, figW, figH, Folder):
@@ -248,7 +260,7 @@ def getStackData(Case, skips):
     Position = Case['Position']
     
     temp = Parallel(n_jobs=FilesAtTime)(delayed(getFigData)
-                                        (fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd) 
+                                        (fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd, Folder) 
                                         for fileName in fileNames)
     
     StackData = np.zeros((temp[0][0].shape[0],temp[0][0].shape[1],1))
@@ -259,8 +271,44 @@ def getStackData(Case, skips):
     
     return StackData
 
+def MakeInSteps(Case, skips):
+    xStart = Case['xstart']
+    xEnd = Case['xend']
+    yStart = Case['ystart']
+    yEnd = Case['yend']
+    zStart = Case['zstart']
+    zEnd = Case['zend']
+    caseName = Case['name']
+    Position = Case['Position']
+    
+    temp = Parallel(n_jobs=FilesAtTime)(delayed(getFigData)
+                                        (fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd, caseName) 
+                                        for fileName in fileNames)
+    
+    files = glob.glob(os.path.join(imFolder+'temp/', '*.p'))
+    files.sort()
+    
+    i = 0
+    for file in files:
+        file=open(fileName,'rb')
+        temp = pickle.load(file)
+        file.close()
+        
+        if i == 0:
+            Data = temp
+        else:
+            Data = np.concatenate((temp,Data),axis=2)
+        i+=1
+
+    fileName = imFolder+caseName+'.p'
+    file=open(fileName,'wb')
+    pickle.dump(file, Data)
+    file.close()
+    
+    os.remove(imFolder+'temp/*.p')
+    
 # %% [markdown]
-# ## make all the frames of all the cases
+# ## mke all the frames of all the cases
 
 # %%
 DataCases = {
@@ -283,7 +331,9 @@ DataCases = {
                        'zstart'   : 0,
                        'zend'     : zmax,
                        'Position' : 2
-                      },
+                      }
+    } 
+'''  
              'EndM2': {
                        'name'     : 'EndM2',
                        'xstart'   : xmax - 2,
@@ -353,9 +403,7 @@ DataCases = {
                        'zstart'   : gridStartHead,
                        'zend'     : zmax,
                        'Position' : 2
-                      }
-    } 
-'''  
+                      },
              'LeftHead': {
                        'name'     : 'LeftHead',
                        'xstart'   : 0,
@@ -476,7 +524,7 @@ for entry in DataCases:
     job = DataCases[entry]['name']
 
 
-    Data = getStackData(DataCases[job],skips)
+    Data = MakeInSteps(DataCases[job],skips)
 
     file=open(imFolder+'Data-'+job+'.p','wb')
     pickle.dump(Data,file)

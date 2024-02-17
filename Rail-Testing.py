@@ -36,7 +36,7 @@ height1 = 0.1524
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = '5m Rail At 15x long bounce test'
+runName = '20m rail at 15x sampling double left rub'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
@@ -50,7 +50,7 @@ frequency = 74574  #brute forced this number to be where simulation frequency
 #            74574  is 3,000,000 hz running, and sample rate %15 is 200k same as actual, if we need more dense
 Signalfrequency = 16300
 
-SaveSize = 100  #100 for 15, 150 for 10x: experimentally found for where we don't run out of memory.
+SaveSize = 150  #100 for 15, 150 for 10x: experimentally found for where we don't run out of memory.
 
 cycles = 60
 
@@ -63,8 +63,9 @@ figDPI = 600
 # 4 is square patch rail 20% down
 # 5 is a dropped wheel with bounce
 # 6 for two rubbing flanges, one on each side
+# 7 for two rubbing flanges, on the same side
 
-FFunction = 5
+FFunction = 1
 
 Wheel1Distance = 15.2 # wheel starts X meter down track
 # use 15.2 for 20m to maximize good reading time
@@ -90,7 +91,7 @@ omegaT1 = ct1 / frequency
 
 #Image Folder
 if FFunction == 1:
-    imFolder += '20m15xTopHit1/'
+    imFolder += '20m15xTopHit2/'
 elif FFunction == 2:
     imFolder += 'Temp/'
 elif FFunction == 3:
@@ -98,9 +99,11 @@ elif FFunction == 3:
 elif FFunction == 4:
     imFolder += 'BiggerAcTii/'
 elif FFunction == 5:
-    imFolder += 'BounceTestBigger/'
-elif FFunction == 6:   #long rail, two wheel rubs
+    imFolder += 'ExtraBigTest/'
+elif FFunction == 6:   #long rail, two wheel xrubs
     imFolder += '20m10XRfRq/'
+elif FFunction == 7:   #long rail, two wheel xrubs
+    imFolder += '20m15xLeftRub/'
 
 if myid==0:
     if os.path.isdir(imFolder):
@@ -129,7 +132,8 @@ GoodDataPints = (FalseWaveTravelTime - FirstWheelTransverseFirstReflectionTime) 
 #runtime = cycles / frequency #cycles / frequency 
 #Tsteps = int(math.ceil(runtime / ts)) + 1       #total Time Steps
 
-Tsteps = StepsTillHit + 200  #calculated spereately for needed space to get reflections
+Tsteps = StepsTillHit + 500  #calculated spereately for needed space to get reflections
+#Tsteps = int(3.1*SaveSize)
 
 runtime = Tsteps * ts
 
@@ -309,6 +313,25 @@ elif FFunction == 6:
     signalLocation[Wheel1Start+6+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
     signalLocation[Wheel1Start-1+sep,gridEndHeadWidth-2:gridEndHeadWidth,gridStartHead:zmax-2] = 0.5
     signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridEndHeadWidth-3:gridEndHeadWidth-2,gridStartHead:zmax-2] = 0.5
+    
+    
+elif FFunction == 7:
+    
+    Wheel1Start = int(Wheel1Distance / gs)
+    
+    signalLocation[Wheel1Start:Wheel1Start+6,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
+
+    signalLocation[Wheel1Start+6,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start-1,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start:Wheel1Start+6,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
+
+    sep = int(1.360/gs) # Wheel 2 is centered 1.36 meters from wheel 1
+    
+    signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 1
+
+    signalLocation[Wheel1Start+6+sep,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start-1+sep,gridStartHeadWidth:gridStartHeadWidth+2,gridStartHead:zmax-2] = 0.5
+    signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
     
     
 if myid == 0:
@@ -548,9 +571,6 @@ if RailShape:
 if Flaw:
     matBCall = MakeFlaw(matBCall, FlawType)
 
-if myid == 0:
-    print('air cuts made, line 310')
-
 #define sine-exponential wave excitation
 
 timeVec=np.linspace(0,runtime,Tsteps)
@@ -567,15 +587,12 @@ inputz=int(gh1/2)
 inputid=int(inputx / npx)
 inputlocx=int(inputx - inputid*npx+1)
 
-if (myid == 0) :
-    print("line 369: glb inputx, local inputx id, local inputx:",inputx,inputid,inputlocx)
-
 
 szzConst=2*ts/(gs*rho1)
 
 amp=100000
 if FFunction == 1:
-    decayRate = 100000
+    decayRate = 40000
 elif FFunction ==5:
     decayRate = 50000
 else:
@@ -676,7 +693,6 @@ mpiAbsorber=distBox(mpiAbsorber,myid,gl1,gw1,gh1,npx,nprocs,mpi_comm)
 
 #Now slab has local versions with ghosts of matProps
 if (myid == 0) :
-    print('split matprops to globs, scratttered parameters to processors, line 449')
     
     ## All signals at 4 nodes from end
     FromEnd = int(.05 / gs) # 5 cm from end, about where laser recording is done
@@ -751,12 +767,14 @@ if (myid == 0) :
                   "SimulationCycleLength" : cycles,
                   "ForcingFuctionNumber" : FFunction,
                   "PerWheelForce" : WheelLoad,
+                  "Wheel1Start" : Wheel1Distance,
                   "PoisonsRatio" : pRatio1,
                   "YoungsModulous" : yModulus1,
                   "MaterialDensity" : rho1,
                   "LongitudinalWaveSpeed" : cl1,
                   "TransverseWaveSpeeed" : ct1,
                   "TimeStep" : ts,
+                  "GridStep" : gs,
                   "RunTime" : runtime,
                   "TimeStepsSimLength" : Tsteps,
                   "GridLengthNodes" : gl1,
@@ -775,7 +793,10 @@ if (myid == 0) :
                   "AbsorberLengthNodes" : AbsorptionRange,
                   "AbsorptionPerNode" : StepAbsorption,
                   "ExpectedGoodData" : GoodDataPints,
-                  "FlawType" : FlawType
+                  "PoisonsRatio" : pRatio1,
+                  "FlawType" : FlawType,
+                  "YoungsModulous" : yModulus1,
+                  "DecayRate" : decayRate
                  }
                   
     file=open(imFolder+'Parameters.p','wb')
