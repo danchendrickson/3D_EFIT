@@ -36,12 +36,12 @@ height1 = 0.1524
 
 #Image Folder
 imFolder = '/sciclone/scr10/dchendrickson01/EFIT/'
-runName = '20m rail at 15x sampling double left rub'
+runName = '20m double rub with 2cm flaw at 19m flaw'
 
 #is the rail supported by 0, 1 or 2 ties
 Ties = 0
 
-FlawType = 0
+FlawType = 7
 # 0 for none, 1 for notch, 2 for crack in head
 
 #Choose ferquency to be used for excitment
@@ -50,7 +50,7 @@ frequency = 74574  #brute forced this number to be where simulation frequency
 #            74574  is 3,000,000 hz running, and sample rate %15 is 200k same as actual, if we need more dense
 Signalfrequency = 16300
 
-SaveSize = 150  #100 for 15, 150 for 10x: experimentally found for where we don't run out of memory.
+SaveSize = 100  #100 for 15, 150 for 10x: experimentally found for where we don't run out of memory.
 
 cycles = 60
 
@@ -92,7 +92,7 @@ omegaT1 = ct1 / frequency
 
 #Image Folder
 if FFunction == 1:
-    imFolder += '20m15xTopHit2/'
+    imFolder += 'FlawRepeat/'
 elif FFunction == 2:
     imFolder += 'Temp/'
 elif FFunction == 3:
@@ -104,7 +104,7 @@ elif FFunction == 5:
 elif FFunction == 6:   #long rail, two wheel xrubs
     imFolder += '20m10XRfRq/'
 elif FFunction == 7:   #long rail, two wheel xrubs
-    imFolder += '20m15xLeftRub/'
+    imFolder += 'FlawRepeatRubbing/'
 
 if myid==0:
     if os.path.isdir(imFolder):
@@ -133,8 +133,10 @@ GoodDataPints = (FalseWaveTravelTime - FirstWheelTransverseFirstReflectionTime) 
 #runtime = cycles / frequency #cycles / frequency 
 #Tsteps = int(math.ceil(runtime / ts)) + 1       #total Time Steps
 
-Tsteps = StepsTillHit + 500  #calculated spereately for needed space to get reflections
+Tsteps = StepsTillHit + 750  #calculated spereately for needed space to get reflections
 #Tsteps = int(3.1*SaveSize)
+#Tsteps = 12000
+
 
 runtime = Tsteps * ts
 
@@ -236,17 +238,22 @@ if FFunction == 1:
     temp = np.ones((gridEndHeadWidth - gridStartHeadWidth,len(bins)))
     temp = NormDist * temp
 
-    temp2 = np.ones((3,gridEndHeadWidth - gridStartHeadWidth,len(bins)))
+    temp2 = np.ones((5,gridEndHeadWidth - gridStartHeadWidth,len(bins)))
     temp2 = temp * temp2
 
     temp2 = np.moveaxis(temp2,-1,0)
     temp2 = np.moveaxis(temp2,1,-1)
     
-    signalLocation[Wheel1Start - (6 * sigma) : Wheel1Start + (6 * sigma)+1,gridStartHeadWidth:gridEndHeadWidth, -3:] = temp2
+    temp2[:,:,3] = 0.750*temp2[:,:,3]
+    temp2[:,:,2] = 0.500*temp2[:,:,2]
+    temp2[:,:,1] = 0.250*temp2[:,:,1]
+    temp2[:,:,0] = 0.125*temp2[:,:,0]
     
+    signalLocation[Wheel1Start - (6 * sigma) : Wheel1Start + (6 * sigma)+1,gridStartHeadWidth:gridEndHeadWidth, -5:] = temp2
+    
+    specificWheelLoad = WheelLoad / np.sum(temp2[:,:,:4])
+
     del temp2
-    
-    specificWheelLoad = WheelLoad / np.sum(temp)
 
     del temp
 
@@ -335,8 +342,6 @@ elif FFunction == 7:
     signalLocation[Wheel1Start+sep:Wheel1Start+6+sep,gridStartHeadWidth+2:gridStartHeadWidth+3,gridStartHead:zmax-2] = 0.5
     
     
-if myid == 0:
-    print('globs made, line 145')
 
 #########
 # FUnctions
@@ -550,12 +555,16 @@ def MakeFlaw(matBCs, FlawType = 1):
         matBCs[EndFlawX+1,StartFlawY-1:EndFlawY+1,VertStart:zmax-2]=1
         matBCs[StartFlawX-1:EndFlawX+1,StartFlawY-1,VertStart:zmax-2]=1
         matBCs[StartFlawX-1:EndFlawX+1,EndFlawY+1,VertStart:zmax-2]=1
+        
     elif FlawType ==2:
         #crack in rail head
-        Wheel2StartPoint = int(1.360/gs) + Wheel1Start
-        StartPoint = int(Wheel2StartPoint+((xmax - Wheel2StartPoint)/2))
+        #Wheel2StartPoint = int(1.360/gs) + Wheel1Start
+        #StartPoint = int(Wheel2StartPoint+((xmax - Wheel2StartPoint)/2))
         
-        MatBCs[StartPoint,gridStartHeadWidth:gridEndHeadWidth,zmax-int(0.01/gs):zmax-1] = 1
+        StartPoint = int(19/gs)
+        
+        MatBCs[StartPoint-1:StartPoint+1,gridStartHeadWidth:gridEndHeadWidth,zmax-int(0.03/gs):] = 1
+        MatBCs[StartPoint,gridStartHeadWidth:gridEndHeadWidth,zmax-int(0.03/gs):] = 0
         
     return matBCs
     
@@ -572,6 +581,66 @@ if RailShape:
 if Flaw:
     matBCall = MakeFlaw(matBCall, FlawType)
 
+#Create End Damping to make asorbing boundary
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+Absorber = np.ones((gl1,gw1,gh1))
+StepAbsorption = 0.5
+AbsorptionRange = 101
+if Absorbing:
+    for x in range(AbsorptionRange):
+        Absorber[x,:,:] = sigmoid((x-(int(AbsorptionRange)/2))/int(AbsorptionRange/10))
+
+    
+#If there are ties:
+if Ties > 0:
+    TieWidth = .2
+    if Ties == 1:
+        TieSpacing =  .54
+    elif Ties == 2:
+        TieSpacing =  .74
+    else:
+        TieSpacing =  .34
+    
+    TieGridWidth = int(TieWidth / gs)
+    TieGridSpacing = int(TieSpacing / gs)
+    
+    i = 0
+    c = 0
+    TieSpace = 0
+    while i < gl1:
+        if TieSpace == 0:
+            c+=1
+            if c == 1 and i != 0:
+                Absorber[i-1,:,3] = 0.8
+                Absorber[i-1,:,2] = 0.6
+                Absorber[i-1,:,1] = 0.4
+                Absorber[i-2,:,2] = 0.8
+                Absorber[i-2,:,1] = 0.6
+                Absorber[i-3,:,1] = 0.8
+            elif c == TieGridWidth:
+                Absorber[i+1,:,3] = 0.8
+                Absorber[i+1,:,2] = 0.6
+                Absorber[i+1,:,1] = 0.4
+                Absorber[i+2,:,2] = 0.8
+                Absorber[i+2,:,1] = 0.6
+                Absorber[i+3,:,1] = 0.8
+                c=0
+                TieSpace = 1
+                
+            Absorber[i,:,1] = 0.2
+            Absorber[i,:,2] = 0.4
+            Absorber[i,:,3] = 0.6
+            Absorber[i,:,4] = 0.8
+            
+            if TieSpace == 0 and c == TieGridSpacing:
+                c = 0
+                TimeSpace = 1
+                
+        i+=1
+            
+    
 #define sine-exponential wave excitation
 
 timeVec=np.linspace(0,runtime,Tsteps)
@@ -616,15 +685,6 @@ if FFunction == 5:
         plt.savefig(imFolder+'signal.png')
         plt.show()
         plt.close()
-
-#Create End Damping to make asorbing boundary
-Absorber = np.ones((gl1,gw1,gh1))
-StepAbsorption = 0.5
-AbsorptionRange = 101
-if Absorbing:
-    for x in range(AbsorptionRange):
-        Absorber[x:AbsorptionRange+1,:,:] *= StepAbsorption
-
 
 # MPI EJW Section #4 changes 
 
@@ -760,6 +820,7 @@ if (myid == 0) :
     Parameters = {"AirCut" : AirCut,
                   "RailShape":  RailShape,
                   "Flaw" : Flaw,
+                  "AbsorptionOn" : Absorbing,
                   "Length" : length1,
                   "Width" : width1,
                   "Height" : height1,
@@ -825,7 +886,7 @@ DisZ = np.zeros((gl1,gw1,gh1))
 
 if myid == RecordNode:
     Records = np.zeros((gh1,gw1,Tsteps))
-
+    
 for t in range(0,Tsteps):
     if FFunction == 1:
         vz -= signalloc * specificWheelLoad / rho1 * ts
@@ -992,4 +1053,10 @@ if myid ==0:
     file=open(imFolder+'MinMax.p','wb')
     pickle.dump(MinMax, file) 
     file.close()
- 
+
+if myid == RecordNode:
+    file=open(imFolder+'SavePlane.p','wb')
+    pickle.dump(Records,file)
+    file.close()
+    
+    

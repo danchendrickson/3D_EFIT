@@ -87,7 +87,7 @@ omegaT1 = ct1 / frequency
 
 #Image Folder
 if FFunction == 1:
-    imFolder += '20m15xTopHit/'
+    imFolder += 'testtemp/'
 elif FFunction == 2:
     imFolder += 'Temp/'
 elif FFunction == 3:

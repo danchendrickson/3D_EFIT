@@ -8,4 +8,4 @@
 cd $PBS_O_WORKDIR
 
 conda activate mpi
-mpiexec -np 600 python3 -u Rail-clunkLockBigRun15x.py >& TryBigRun-240205.out
+mpiexec -np 600 python3 -u Rail-clunkLockBigRun15x.py >& TryBigRun-240304.out

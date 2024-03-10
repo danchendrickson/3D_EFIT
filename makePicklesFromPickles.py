@@ -28,7 +28,7 @@ if not 'FFormat' in locals():
 # %%
 import multiprocessing
 from joblib import Parallel, delayed
-num_jobs=30
+num_jobs=5
 
 # %%
 ## Task specific imports
@@ -70,7 +70,7 @@ else:
 # ## Load data
 
 # %%
-Case = '20m15xTopHit'
+Case = 'AlternateRubStandard'
 #
 #            Done: 'FlawTest1'
 #                  '20m10xTopHit'
@@ -83,12 +83,19 @@ Case = '20m15xTopHit'
 #                  'BounceTestBigger'
 #                  'ExtraBigTest'
 #                  '20m15xTopHit2'
-CasesAtaTime = 1
-FilesAtTime = 5
-ProcessPerFile = 2
+#                  'TestAbsorber' 
+#                  '20m15xTopHit'
+#                  'TestAbsorberTies'
+#                  '20m15xLeftRub2'
+#                  'FlawRepeat'
+#                  'FlawRepeatRubbing'
+CasesAtaTime = 3
+FilesAtTime = 1
+ProcessPerFile = 1
 
 imFolder=rootfolder+Case+'/'
 fileNames = glob.glob(imFolder+'Movements*.p')
+fileNames.sort()
 
 Views=[]
 
@@ -100,6 +107,8 @@ Parameters=pickle.load(file)
 
 file.close()
 
+print(Case)
+print(Parameters)
 
 # %%
 xmax = Parameters["LargestXnode"]
@@ -131,32 +140,35 @@ else:
 # %%
 def getFigData(fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd):
     
-    file=open(fileName,'rb')
-    temp = pickle.load(file)
-    file.close()
-    
-    Data = temp[Position][:,:,:,0::skips]
-    
-    del temp
+    try:
+        file=open(fileName,'rb')
+        temp = pickle.load(file)
+        file.close()
+
+        Data = temp[Position][:,:,:,0::skips]
+
+        del temp
 
 
-    if xStart == xEnd:
-        ReturnData = Data[xStart,:,:,:]
-        ReturnData[:gridStartWeb-1,gridEndFoot+2:gridStartHead-2] = np.nan
-        ReturnData[:gridStartHeadWidth-1,gridStartHead-2:] = np.nan
-        ReturnData[gridEndWeb+2:,gridEndFoot+2:gridStartHead-1] = np.nan
-        ReturnData[gridEndHeadWidth+4:,gridStartHead-1:] = np.nan
-        
-    elif yStart == yEnd:
-        ReturnData = Data[:,yStart,:,:]
-    elif zStart == zEnd:
-        ReturnData = Data[:,:,zStart,:]
-    else:
-        print('Error no dimmension is a plane')
-        ReturnData = []
-        
-        
-    return ReturnData, int(fileName[-5:][:3])
+        if xStart == xEnd:
+            ReturnData = Data[xStart,:,:,:]
+            ReturnData[:gridStartWeb-1,gridEndFoot+2:gridStartHead-2] = np.nan
+            ReturnData[:gridStartHeadWidth-1,gridStartHead-2:] = np.nan
+            ReturnData[gridEndWeb+2:,gridEndFoot+2:gridStartHead-1] = np.nan
+            ReturnData[gridEndHeadWidth+2:,gridStartHead-1:] = np.nan
+
+        elif yStart == yEnd:
+            ReturnData = Data[:,yStart,:,:]
+        elif zStart == zEnd:
+            ReturnData = Data[:,:,zStart,:]
+        else:
+            print('Error no dimmension is a plane')
+            ReturnData = []
+
+
+        return ReturnData, int(fileName[-5:][:3])
+    except:
+        print('Failed on ',fileName)
 
 # %%
 def SimpleFig(Data, t, v, figW, figH, Folder):
@@ -206,7 +218,7 @@ def runCase(Case, skips):
                                         (fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd) 
                                         for fileName in fileNames[:5])
     
-    StackData = np.zeros((temp[0][0].shape[0],temp[0][0].shape[1],1))
+    StackData = np.zeros((temp[0].shape[0],temp[0].shape[1],1))
     
     for group in temp:
         StackData = np.concatenate((StackData,group[0]),axis=2)
@@ -247,23 +259,77 @@ def getStackData(Case, skips):
     Folder = Case['name']
     Position = Case['Position']
     
-    temp = Parallel(n_jobs=FilesAtTime)(delayed(getFigData)
-                                        (fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd) 
-                                        for fileName in fileNames)
+    Files = glob.glob(imFolder+'Movements*.p')
+    Files.sort()
     
-    StackData = np.zeros((temp[0][0].shape[0],temp[0][0].shape[1],1))
+    i=0
+    for fileName in Files:
+        try:
+            group = getFigData(fileName, Position, skips, xStart, xEnd, yStart, yEnd, zStart, zEnd)
+            print(Folder,  np.shape(group[0]), np.shape(group[0][0]))
+            if i == 0:
+                StackData = np.zeros((group[0].shape[0],group[0].shape[1],1))
+                print(StackData.shape)
+            StackData = np.concatenate((StackData,group[0]),axis=2)
+            i=i+1
+        except:
+            print(fileName,' failed')
+    file=open(imFolder+'Data-'+Case['name']+'.p','wb')
+    pickle.dump(StackData,file)
+    file.close()
+
     
-    for group in temp:
-        StackData = np.concatenate((StackData,group[0]),axis=2)
-    del temp
-    
-    return StackData
+    return i
 
 # %% [markdown]
 # ## make all the frames of all the cases
 
 # %%
 DataCases = {
+             'MiddleVerticalPlaneE': {
+                       'name'     : 'MiddleVerticalPlaneE',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : int(ymax/2),
+                       'yend'     : int(ymax/2),
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 0
+                      },
+             'EndM2x': {
+                       'name'     : 'EndM2x',
+                       'xstart'   : xmax - 2,
+                       'xend'     : xmax - 2,
+                       'ystart'   : 0,
+                       'yend'     : ymax,
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 1
+                      },
+             'EndM12yNS': {
+                       'name'     : 'EndM12yNS',
+                       'Skips'    : 1,
+                       'xstart'   : xmax - 12,
+                       'xend'     : xmax - 12,
+                       'ystart'   : 0,
+                       'yend'     : ymax,
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 2
+                      }
+}
+''',
+             'EndM4yNS': {
+                       'name'     : 'EndM4yNS',
+                       'Skips'    : 1,
+                       'xstart'   : xmax - 4,
+                       'xend'     : xmax - 4,
+                       'ystart'   : 0,
+                       'yend'     : ymax,
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 2
+                      },
              'EndM4': {
                        'name'     : 'EndM4',
                        'xstart'   : xmax - 4,
@@ -273,18 +339,68 @@ DataCases = {
                        'zstart'   : 0,
                        'zend'     : zmax,
                        'Position' : 0
+                       },
+             'WebStart': {
+                       'name'     : 'WebStart',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : gridStartWeb+1,
+                       'yend'     : gridStartWeb+1,
+                       'zstart'   : gridEndFoot,
+                       'zend'     : gridStartHead,
+                       'Position' : 1
                       },
-             'EndM4y': {
-                       'name'     : 'EndM4y',
-                       'xstart'   : xmax - 4,
-                       'xend'     : xmax - 4,
-                       'ystart'   : 0,
-                       'yend'     : ymax,
-                       'zstart'   : 0,
+             'HeadEnd': {
+                       'name'     : 'HeadEnd',
+                       'xstart'   : 0,
+                       'xend'     : xmax,
+                       'ystart'   : gridEndHeadWidth-1,
+                       'yend'     : gridEndHeadWidth-1,
+                       'zstart'   : gridStartHead,
                        'zend'     : zmax,
                        'Position' : 2
+                      }, 
+             'TopSurface': {
+                       'name'     : 'TopSurface',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : gridStartHeadWidth-1,
+                       'yend'     : gridEndHeadWidth+1,
+                       'zstart'   : zmax-3,
+                       'zend'     : zmax-3,
+                       'Position' : 0
                       },
-             'EndM2': {
+             'TopSurfaceZ': {
+                       'name'     : 'TopSurfaceZ',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : gridStartHeadWidth-1,
+                       'yend'     : gridEndHeadWidth+1,
+                       'zstart'   : zmax-3,
+                       'zend'     : zmax-3,
+                       'Position' : 3
+                      },
+             'LeftHead': {
+                       'name'     : 'LeftHead',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : gridStartHeadWidth,
+                       'yend'     : gridStartHeadWidth,
+                       'zstart'   : gridStartHead,
+                       'zend'     : zmax,
+                       'Position' : 1
+                      },
+             'MiddleVerticalPlanex': {
+                       'name'     : 'MiddleVerticalPlanex',
+                       'xstart'   : 0,
+                       'xend'     : xmax ,
+                       'ystart'   : int(ymax/2),
+                       'yend'     : int(ymax/2),
+                       'zstart'   : 0,
+                       'zend'     : zmax,
+                       'Position' : 1
+                      },
+            'EndM2': {
                        'name'     : 'EndM2',
                        'xstart'   : xmax - 2,
                        'xend'     : xmax - 2,
@@ -304,26 +420,7 @@ DataCases = {
                        'zend'     : zmax,
                        'Position' : 2
                       },
-             'EndM2x': {
-                       'name'     : 'EndM2x',
-                       'xstart'   : xmax - 2,
-                       'xend'     : xmax - 2,
-                       'ystart'   : 0,
-                       'yend'     : ymax,
-                       'zstart'   : 0,
-                       'zend'     : zmax,
-                       'Position' : 1
-                      },
-             'WebStart': {
-                       'name'     : 'WebStart',
-                       'xstart'   : 0,
-                       'xend'     : xmax ,
-                       'ystart'   : gridStartWeb+1,
-                       'yend'     : gridStartWeb+1,
-                       'zstart'   : gridEndFoot,
-                       'zend'     : gridStartHead,
-                       'Position' : 1
-                      },
+
              'WebEnd': {
                        'name'     : 'WebEnd',
                        'xstart'   : 0,
@@ -332,48 +429,6 @@ DataCases = {
                        'yend'     : gridEndWeb-1,
                        'zstart'   : gridEndFoot,
                        'zend'     : gridStartHead,
-                       'Position' : 1
-                      },
-             'TopSurface': {
-                       'name'     : 'TopSurface',
-                       'xstart'   : 0,
-                       'xend'     : xmax ,
-                       'ystart'   : gridStartHeadWidth-1,
-                       'yend'     : gridEndHeadWidth+1,
-                       'zstart'   : zmax-3,
-                       'zend'     : zmax-3,
-                       'Position' : 0
-                      },
-             'HeadEnd': {
-                       'name'     : 'HeadEnd',
-                       'xstart'   : 0,
-                       'xend'     : xmax,
-                       'ystart'   : gridEndHeadWidth-1,
-                       'yend'     : gridEndHeadWidth-1,
-                       'zstart'   : gridStartHead,
-                       'zend'     : zmax,
-                       'Position' : 2
-                      }
-    } 
-'''  
-             'LeftHead': {
-                       'name'     : 'LeftHead',
-                       'xstart'   : 0,
-                       'xend'     : xmax ,
-                       'ystart'   : gridStartHeadWidth,
-                       'yend'     : gridStartHeadWidth,
-                       'zstart'   : gridStartHead,
-                       'zend'     : zmax,
-                       'Position' : 1
-                      },
-             'MiddleVerticalPlanex': {
-                       'name'     : 'MiddleVerticalPlanex',
-                       'xstart'   : 0,
-                       'xend'     : xmax ,
-                       'ystart'   : int(ymax/2),
-                       'yend'     : int(ymax/2),
-                       'zstart'   : 0,
-                       'zend'     : zmax,
                        'Position' : 1
                       },
              'MiddleVerticalPlaney': {
@@ -395,16 +450,6 @@ DataCases = {
                        'zstart'   : 0,
                        'zend'     : zmax,
                        'Position' : 3
-                      },
-             'MiddleVerticalPlaneE': {
-                       'name'     : 'MiddleVerticalPlaneE',
-                       'xstart'   : 0,
-                       'xend'     : xmax ,
-                       'ystart'   : int(ymax/2),
-                       'yend'     : int(ymax/2),
-                       'zstart'   : 0,
-                       'zend'     : zmax,
-                       'Position' : 0
                       },
              'RightHead': {
                        'name'     : 'RightHead',
@@ -456,31 +501,35 @@ DataCases = {
                        'zend'     : int(zmax/2),
                        'Position' : 1
                       },
-             'MiddleVerticalPlane': {
-                       'name'     : 'MiddleVerticalPlane',
-                       'xstart'   : 0,
-                       'xend'     : xmax ,
-                       'ystart'   : int(ymax/2),
-                       'yend'     : int(ymax/2),
-                       'zstart'   : 0,
-                       'zend'     : zmax,
-                       'Position' : 1
-                      }
+
     
-}'''
+}
+'''
 
 # %%
 stime = time.time()
 
-for entry in DataCases:
-    job = DataCases[entry]['name']
+skips = 1
 
 
-    Data = getStackData(DataCases[job],skips)
 
-    file=open(imFolder+'Data-'+job+'.p','wb')
-    pickle.dump(Data,file)
-    file.close()
+j = Parallel(n_jobs=CasesAtaTime)(delayed(getStackData)(DataCases[DataCases[Case]['name']],skips)for Case in DataCases)
+#                                (StackData[:,:,i], i, v, figW, figH, Folder)
+#                                for i in range(StackData.shape[2]))
+#for Case in DataCases:
+#    getStackData(DataCases[DataCases[Case]['name']],skips)
 
-    print(int((time.time()-stime)/60.0*100)/100)
+print(j)
+
+#for entry in DataCases:
+#    job = DataCases[entry]['name']
+#
+#
+#    Data = getStackData(DataCases[job],skips)#
+#
+#    file=open(imFolder+'Data-'+job+'.p','wb')
+#    pickle.dump(Data,file)
+#    file.close()
+#
+#    print(int((time.time()-stime)/60.0*100)/100)
 

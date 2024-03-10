@@ -65,7 +65,7 @@ figDPI = 600
 # 6 for two rubbing flanges, one on each side
 # 7 for two rubbing flanges, on the same side
 
-FFunction = 1
+FFunction = 7
 
 Wheel1Distance = 15.2 # wheel starts X meter down track
 # use 15.2 for 20m to maximize good reading time
@@ -104,7 +104,7 @@ elif FFunction == 5:
 elif FFunction == 6:   #long rail, two wheel xrubs
     imFolder += '20m10XRfRq/'
 elif FFunction == 7:   #long rail, two wheel xrubs
-    imFolder += '20m15xLeftRub/'
+    imFolder += '20m15xLeftRub2/'
 
 if myid==0:
     if os.path.isdir(imFolder):
@@ -825,7 +825,7 @@ DisZ = np.zeros((gl1,gw1,gh1))
 
 if myid == RecordNode:
     Records = np.zeros((gh1,gw1,Tsteps))
-
+    
 for t in range(0,Tsteps):
     if FFunction == 1:
         vz -= signalloc * specificWheelLoad / rho1 * ts
@@ -992,4 +992,10 @@ if myid ==0:
     file=open(imFolder+'MinMax.p','wb')
     pickle.dump(MinMax, file) 
     file.close()
- 
+
+if myid == RecordNode:
+    file=open(imFolder+'SavePlane.p','wb')
+    pickle.dump(Records,file)
+    file.close()
+    
+    
